@@ -25,6 +25,10 @@ jobs:
           python -m pip install --upgrade pip poetry
           uv sync
 
-      - name: Running checks
+      - name: Running linters
         run: |
           uv run pre-commit run --all-files --show-diff-on-failure
+
+      - name: Running tests
+        run: |
+          uv run pre-commit run pytest --hook-stage pre-push --all-files
