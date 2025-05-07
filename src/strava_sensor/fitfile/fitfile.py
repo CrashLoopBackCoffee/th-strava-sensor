@@ -1,6 +1,7 @@
 import collections.abc as c
 import datetime
 import enum
+import logging
 import pathlib
 import typing as t
 
@@ -10,6 +11,8 @@ from strava_sensor.fitfile.model import DeviceStatus
 
 type FitMessageList = c.Sequence[c.Mapping[str | int, t.Any]]
 type FitMessages = c.MutableMapping[str, FitMessageList]
+
+_logger = logging.getLogger(__name__)
 
 
 class NotAFitFileError(ValueError):
@@ -36,6 +39,7 @@ class MessageType(enum.StrEnum):
 
 class FitFile:
     def __init__(self, content: bytearray):
+        _logger.info('Parsing FIT file')
         stream = garmin_fit_sdk.Stream.from_byte_array(content)
         decoder = garmin_fit_sdk.Decoder(stream)
 
