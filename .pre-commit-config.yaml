@@ -33,3 +33,13 @@ repos:
         entry: ./.venv/bin/yamllint --strict -c=.yamllint
         language: system
         types: [yaml]
+
+      # Pre-push hooks, whichy take too long during pre-commit
+      - id: pytest
+        stages: [pre-push]
+        name: pytest
+        entry: ./.venv/bin/pytest tests --cov --cov-report=term-missing --cov-report=xml:coverage.xml
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
