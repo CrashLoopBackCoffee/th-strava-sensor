@@ -30,7 +30,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project.scripts]
-parse-fit-file = "strava_sensor.cli:fitfile_main"
+parse-activity = "strava_sensor.cli:main"
 
 [tool.ruff]
 line-length = 100
