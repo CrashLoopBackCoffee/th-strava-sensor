@@ -9,6 +9,7 @@ from strava_sensor.fitfile.fitfile import CorruptedFitFileError, FitFile, NotAFi
 from strava_sensor.mqtt.mqtt import MQTTClient
 from strava_sensor.source.base import BaseSource
 from strava_sensor.source.file import FileSource
+from strava_sensor.source.garmin import GarminSource
 
 _logger = logging.getLogger(__name__)
 
@@ -24,6 +25,12 @@ def initialize_sources() -> list[BaseSource]:
 
     # Add file source
     sources.append(FileSource())
+
+    # Add Garmin source
+    garmin_username = os.environ.get('GARMIN_USERNAME')
+    garmin_password = os.environ.get('GARMIN_PASSWORD')
+    if garmin_username and garmin_password:
+        sources.append(GarminSource(garmin_username, garmin_password))
 
     return sources
 
