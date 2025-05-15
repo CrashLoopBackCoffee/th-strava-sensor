@@ -1,6 +1,8 @@
+import argparse
 import collections.abc as c
 import logging
 import os
+import sys
 import time
 
 import daiquiri
@@ -10,13 +12,20 @@ from strava_sensor.mqtt.mqtt import MQTTClient
 from strava_sensor.source.base import BaseSource
 from strava_sensor.source.file import FileSource
 from strava_sensor.source.garmin import GarminSource
+from strava_sensor.source.strava import StravaSource
 
 _logger = logging.getLogger(__name__)
 
 
 def setup_logging():
     daiquiri.setup(level=logging.DEBUG)
-    daiquiri.set_default_log_levels([('paho', 'INFO')])
+    daiquiri.set_default_log_levels(
+        [
+            ('paho', 'INFO'),
+            ('stravalib', 'INFO'),
+            ('urllib3.connectionpool', 'INFO'),
+        ]
+    )
 
 
 def initialize_sources() -> list[BaseSource]:
@@ -32,6 +41,12 @@ def initialize_sources() -> list[BaseSource]:
     if garmin_username and garmin_password:
         sources.append(GarminSource(garmin_username, garmin_password))
 
+    # Strava doesn't support downloading FIT files directly.
+    # So we need to create it last and give it downstream sources.
+    strava_refresh_token = os.environ['STRAVA_REFRESH_TOKEN']
+    if strava_refresh_token:
+        sources.append(StravaSource(strava_refresh_token, sources))
+
     return sources
 
 
@@ -45,8 +60,6 @@ def get_source_for_uri(uri: str, sources: c.Iterable[BaseSource]) -> BaseSource 
 
 def main() -> None:
     setup_logging()
-    import argparse
-    import sys
 
     parser = argparse.ArgumentParser(description='Parse a FIT file for debugging')
     parser.add_argument(

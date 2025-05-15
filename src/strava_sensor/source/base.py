@@ -1,4 +1,5 @@
 import abc
+import datetime
 import logging
 import urllib.parse
 
@@ -43,3 +44,18 @@ class BaseSource(metaclass=abc.ABCMeta):
             The activity data as bytes.
         """
         ...
+
+    def find_activity(
+        self, date: datetime.date, elapsed_time_in_s: int, distance_in_m: int
+    ) -> str | None:
+        """Find an activity in the source.
+
+        Args:
+            date: The date of the activity.
+            elapsed_time_in_s: The elapsed time of the activity in seconds.
+            distance_in_m: The distance of the activity in meters.
+
+        Returns:
+            The URI of the activity, or None if not found.
+        """
+        return None
