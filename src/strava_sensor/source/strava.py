@@ -44,9 +44,6 @@ class StravaSource(BaseSource):
         activity = self.client.get_activity(activity_id)
         if activity is None:
             raise ValueError(f'Activity {activity_id} not found')
-        external_id = activity.external_id
-        if external_id is None:
-            raise ValueError(f'Activity {activity_id} has no external ID')
 
         assert activity.start_date
         activity_date = activity.start_date.date()
@@ -63,8 +60,8 @@ class StravaSource(BaseSource):
 
             if not downstream_uri:
                 continue
-            _logger.debug('Found activity %s in %s', downstream_uri, source.__class__.__name__)
 
+            _logger.debug('Found activity %s in %s', downstream_uri, source.__class__.__name__)
             return source.read_activity(downstream_uri)
 
         _logger.warning('No downstream source found for activity %s', uri)
