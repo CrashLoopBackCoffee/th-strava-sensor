@@ -12,7 +12,7 @@ class FileSource(BaseSource):
         """Read an activity from the file.
 
         Args:
-            identifier: The path to the activity to read.
+            uri: The path to the activity to read.
 
         Returns:
             The activity data as bytes.
