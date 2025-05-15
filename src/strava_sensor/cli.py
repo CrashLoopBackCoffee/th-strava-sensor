@@ -6,6 +6,7 @@ import sys
 import time
 
 import daiquiri
+import stravalib
 
 from strava_sensor.fitfile.fitfile import CorruptedFitFileError, FitFile, NotAFitFileError
 from strava_sensor.mqtt.mqtt import MQTTClient
@@ -45,7 +46,12 @@ def initialize_sources() -> list[BaseSource]:
     # So we need to create it last and give it downstream sources.
     strava_refresh_token = os.environ['STRAVA_REFRESH_TOKEN']
     if strava_refresh_token:
-        sources.append(StravaSource(strava_refresh_token, sources))
+        client = stravalib.Client(
+            refresh_token=strava_refresh_token,
+            # Hack to avoid an access token in the first place
+            token_expires=1,
+        )
+        sources.append(StravaSource(client, sources))
 
     return sources
 

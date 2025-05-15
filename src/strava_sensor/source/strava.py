@@ -15,12 +15,8 @@ class StravaSource(BaseSource):
     uri_scheme = 'strava'
     http_hosts = ['www.strava.com', 'strava.com']
 
-    def __init__(self, refresh_token: str, downstream_sources: c.Iterable[BaseSource]):
-        self.client = stravalib.Client(
-            refresh_token=refresh_token,
-            # Hack to avoid an access token in the first place
-            token_expires=1,
-        )
+    def __init__(self, client: stravalib.Client, downstream_sources: c.Iterable[BaseSource]):
+        self.client = client
 
         # Strava doesn't offer a way to download the original FIT file
         # So we need to use the downstream sources to do that
