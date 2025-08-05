@@ -5,6 +5,7 @@ A Python tool that extracts device battery information from sports activity FIT 
 ## Features
 
 - **Multi-source support**: Read FIT files from local filesystem, Garmin Connect, or find activities via Strava API
+- **Webhook integration**: Automatically process new Strava activities via webhook notifications
 - **Device battery monitoring**: Extract battery voltage, status, and level from multiple devices in a single activity
 - **Home Assistant integration**: Auto-discovery MQTT sensors with proper device classes
 - **Robust parsing**: Handle corrupted files and various FIT file formats gracefully
@@ -40,6 +41,20 @@ uv run parse-activity https://www.strava.com/activities/123456789
 uv run parse-activity --publish file:///path/to/activity.fit
 ```
 
+### Webhook Integration
+
+Set up automatic processing of new Strava activities using webhooks:
+
+```bash
+# Start webhook server (listens for Strava events)
+uv run strava-sensor webhook-server --port 8080 --publish
+
+# Manage webhook subscriptions
+uv run strava-sensor webhook-subscription create https://your-server.com/webhook
+uv run strava-sensor webhook-subscription list
+uv run strava-sensor webhook-subscription delete 12345
+```
+
 ## Configuration
 
 ### Environment Variables
@@ -51,6 +66,11 @@ export GARMIN_PASSWORD="your_password"
 
 # Required for Strava integration
 export STRAVA_REFRESH_TOKEN="your_refresh_token"
+
+# Required for Strava webhook functionality
+export STRAVA_CLIENT_ID="your_client_id"
+export STRAVA_CLIENT_SECRET="your_client_secret"
+export STRAVA_WEBHOOK_VERIFY_TOKEN="your_webhook_verify_token"
 
 # Required for MQTT publishing
 export MQTT_BROKER_URL="mqtt://your-broker:1883"

@@ -14,6 +14,8 @@ from strava_sensor.source.base import BaseSource
 from strava_sensor.source.file import FileSource
 from strava_sensor.source.garmin import GarminSource
 from strava_sensor.source.strava import StravaSource
+from strava_sensor.sources import initialize_sources
+from strava_sensor.webhook.cli import add_webhook_subcommands
 
 _logger = logging.getLogger(__name__)
 
@@ -29,33 +31,6 @@ def setup_logging():
     )
 
 
-def initialize_sources() -> list[BaseSource]:
-    """Initialize the sources for reading activities."""
-    sources = []
-
-    # Add file source
-    sources.append(FileSource())
-
-    # Add Garmin source
-    garmin_username = os.environ.get('GARMIN_USERNAME')
-    garmin_password = os.environ.get('GARMIN_PASSWORD')
-    if garmin_username and garmin_password:
-        sources.append(GarminSource(garmin_username, garmin_password))
-
-    # Strava doesn't support downloading FIT files directly.
-    # So we need to create it last and give it downstream sources.
-    strava_refresh_token = os.environ['STRAVA_REFRESH_TOKEN']
-    if strava_refresh_token:
-        client = stravalib.Client(
-            refresh_token=strava_refresh_token,
-            # Hack to avoid an access token in the first place
-            token_expires=1,
-        )
-        sources.append(StravaSource(client, sources))
-
-    return sources
-
-
 def get_source_for_uri(uri: str, sources: c.Iterable[BaseSource]) -> BaseSource | None:
     """Get the source for the given URI."""
     for source in sources:
@@ -64,24 +39,8 @@ def get_source_for_uri(uri: str, sources: c.Iterable[BaseSource]) -> BaseSource 
     return None
 
 
-def main() -> None:
-    setup_logging()
-
-    parser = argparse.ArgumentParser(description='Parse a FIT file for debugging')
-    parser.add_argument(
-        '--publish',
-        action='store_true',
-        help='Publish to MQTT. Needs MQTT_BROKER_URL, MQTT_USERNAME and MQTT_PASSWORD set.',
-    )
-    parser.add_argument(
-        'source',
-        type=str,
-        help='Source URI FIT file. Can be a file (file://path/to/file) '
-        'or a Garmin activity ID (garmin://<activity-id>) '
-        'or a link to the activity on Garmin Connect (https://connect.garmin.com/modern/activity/<activity-id>)',
-    )
-    args = parser.parse_args()
-
+def cmd_parse_activity(args: argparse.Namespace) -> None:
+    """Parse a single activity."""
     mqtt_client: MQTTClient | None = None
     if args.publish:
         mqtt_broker_url = os.environ['MQTT_BROKER_URL']
@@ -139,3 +98,54 @@ def main() -> None:
     except (NotAFitFileError, CorruptedFitFileError) as e:
         print(f'Error: {e}', file=sys.stderr)
         sys.exit(1)
+
+
+def main() -> None:
+    setup_logging()
+
+    parser = argparse.ArgumentParser(description='Strava Sensor: Extract device battery info from FIT files')
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+
+    # Parse activity command (default behavior)
+    parse_parser = subparsers.add_parser(
+        'parse-activity',
+        help='Parse a FIT file and extract device battery information'
+    )
+    parse_parser.add_argument(
+        '--publish',
+        action='store_true',
+        help='Publish to MQTT. Needs MQTT_BROKER_URL, MQTT_USERNAME and MQTT_PASSWORD set.',
+    )
+    parse_parser.add_argument(
+        'source',
+        type=str,
+        help='Source URI FIT file. Can be a file (file://path/to/file) '
+        'or a Garmin activity ID (garmin://<activity-id>) '
+        'or a link to the activity on Garmin Connect (https://connect.garmin.com/modern/activity/<activity-id>)',
+    )
+    parse_parser.set_defaults(func=cmd_parse_activity)
+
+    # Add webhook commands
+    add_webhook_subcommands(subparsers)
+
+    args = parser.parse_args()
+
+    # Handle legacy behavior - if no subcommand is provided, treat as parse-activity
+    if args.command is None:
+        # Re-parse with parse-activity as default
+        import sys
+        if len(sys.argv) == 1:
+            # Only help was requested
+            parser.print_help()
+            return
+        
+        # Insert parse-activity as first argument if not present
+        if len(sys.argv) > 1 and sys.argv[1] not in ['parse-activity', 'webhook-server', 'webhook-subscription']:
+            sys.argv.insert(1, 'parse-activity')
+            args = parser.parse_args()
+
+    # Execute the command
+    if hasattr(args, 'func'):
+        args.func(args)
+    else:
+        parser.print_help()
