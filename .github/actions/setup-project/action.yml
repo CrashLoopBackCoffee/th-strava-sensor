@@ -1,15 +1,10 @@
 name: 'Setup Project'
-description: 'Sets up Python, UV, project dependencies, and Grafana Alloy for the th-strava-sensor project'
+description: 'Sets up Python, UV, and project dependencies for the th-strava-sensor project'
 inputs:
   python-version:
     description: 'Python version to install'
     required: false
     default: '3.13'
-  alloy-version:
-    description: 'Grafana Alloy version to install'
-    required: false
-    # renovate: datasource=github-releases packageName=grafana/alloy versioning=semver
-    default: 'v1.10.0'
 
 runs:
   using: 'composite'
@@ -25,12 +20,4 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
-        python -m pip install --upgrade pip poetry
         uv sync
-
-    - name: Install grafana alloy
-      shell: bash
-      run: |
-        wget -q https://github.com/grafana/alloy/releases/download/${{ inputs.alloy-version }}/alloy-boringcrypto-linux-amd64.zip
-        unzip alloy-boringcrypto-linux-amd64.zip
-        sudo mv alloy-boringcrypto-linux-amd64 /usr/local/bin/alloy
