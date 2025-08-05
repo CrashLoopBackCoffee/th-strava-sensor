@@ -86,7 +86,7 @@ from strava_sensor.source.base import BaseSource
 class BaseSource(metaclass=abc.ABCMeta):
     uri_scheme: str | None = None
     http_hosts: list[str] = []
-    
+
     def matches_uri(self, uri: str) -> bool
     def read_activity(self, uri: str) -> bytearray
     def find_activity(self, date: datetime.date, elapsed_time_in_s: int, distance_in_m: int) -> str | None
@@ -139,17 +139,17 @@ from strava_sensor.fitfile.fitfile import FitFile, NotAFitFileError, CorruptedFi
 
 try:
     fitfile = FitFile(activity_data)
-    
+
     # Basic activity info
     activity_id = fitfile.activity_id
     start_time = fitfile.start_time
-    
+
     # Device information
     devices = fitfile.get_devices_status()
     for device in devices:
         print(f"Device: {device.product}")
         print(f"Battery: {device.battery_level}%")
-        
+
 except NotAFitFileError:
     print("File is not a valid FIT file")
 except CorruptedFitFileError:

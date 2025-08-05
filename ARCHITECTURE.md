@@ -22,7 +22,7 @@ The source system provides an abstraction layer for reading activity data from d
 class BaseSource(metaclass=abc.ABCMeta):
     uri_scheme = None  # URI scheme (e.g., 'file', 'garmin')
     http_hosts = []    # HTTP hostnames this source handles
-    
+
     def matches_uri(self, uri: str) -> bool
     def read_activity(self, uri: str) -> bytearray
     def find_activity(self, date, elapsed_time, distance) -> str | None
