@@ -1,13 +1,11 @@
 """Tests for webhook functionality."""
 
-import json
 import socket
-import threading
 import time
+
 from unittest.mock import Mock, patch
 from urllib.parse import urlencode
 
-import pytest
 import requests
 
 from strava_sensor.webhook.processor import ActivityProcessor
@@ -20,8 +18,7 @@ def get_free_port():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(('', 0))
         s.listen(1)
-        port = s.getsockname()[1]
-    return port
+        return s.getsockname()[1]
 
 
 class TestWebhookEvent:

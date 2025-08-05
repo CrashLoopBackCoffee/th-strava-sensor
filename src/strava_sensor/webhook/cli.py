@@ -7,8 +7,8 @@ import signal
 import sys
 import time
 
-from strava_sensor.sources import initialize_sources
 from strava_sensor.mqtt.mqtt import MQTTClient
+from strava_sensor.sources import initialize_sources
 from strava_sensor.webhook.processor import ActivityProcessor
 from strava_sensor.webhook.server import WebhookServer
 from strava_sensor.webhook.subscription import WebhookSubscriptionManager

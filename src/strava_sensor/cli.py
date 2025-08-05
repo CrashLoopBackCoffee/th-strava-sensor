@@ -6,14 +6,10 @@ import sys
 import time
 
 import daiquiri
-import stravalib
 
 from strava_sensor.fitfile.fitfile import CorruptedFitFileError, FitFile, NotAFitFileError
 from strava_sensor.mqtt.mqtt import MQTTClient
 from strava_sensor.source.base import BaseSource
-from strava_sensor.source.file import FileSource
-from strava_sensor.source.garmin import GarminSource
-from strava_sensor.source.strava import StravaSource
 from strava_sensor.sources import initialize_sources
 from strava_sensor.webhook.cli import add_webhook_subcommands
 
@@ -133,7 +129,6 @@ def main() -> None:
     # Handle legacy behavior - if no subcommand is provided, treat as parse-activity
     if args.command is None:
         # Re-parse with parse-activity as default
-        import sys
         if len(sys.argv) == 1:
             # Only help was requested
             parser.print_help()
