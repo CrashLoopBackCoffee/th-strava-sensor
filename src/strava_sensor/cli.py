@@ -11,7 +11,7 @@ from strava_sensor.fitfile.fitfile import CorruptedFitFileError, FitFile, NotAFi
 from strava_sensor.mqtt.mqtt import MQTTClient
 from strava_sensor.source.base import BaseSource
 from strava_sensor.sources import initialize_sources
-from strava_sensor.webhook.cli import add_webhook_subcommands
+from strava_sensor.webhook.cli import add_webhook_server_command
 
 _logger = logging.getLogger(__name__)
 
@@ -121,8 +121,8 @@ def main() -> None:
     )
     parse_parser.set_defaults(func=cmd_parse_activity)
 
-    # Add webhook commands
-    add_webhook_subcommands(subparsers)
+    # Add webhook server command
+    add_webhook_server_command(subparsers)
 
     args = parser.parse_args()
 
@@ -135,7 +135,7 @@ def main() -> None:
             return
         
         # Insert parse-activity as first argument if not present
-        if len(sys.argv) > 1 and sys.argv[1] not in ['parse-activity', 'webhook-server', 'webhook-subscription']:
+        if len(sys.argv) > 1 and sys.argv[1] not in ['parse-activity', 'webhook-server']:
             sys.argv.insert(1, 'parse-activity')
             args = parser.parse_args()
 

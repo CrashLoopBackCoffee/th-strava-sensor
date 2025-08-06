@@ -46,14 +46,22 @@ uv run parse-activity --publish file:///path/to/activity.fit
 Set up automatic processing of new Strava activities using webhooks:
 
 ```bash
-# Start webhook server (listens for Strava events)
-uv run strava-sensor webhook-server --port 8080 --publish
+# Start webhook server with automatic subscription management
+uv run strava-sensor webhook-server --port 8080 --publish \
+    --callback-url https://your-server.com/webhook
 
-# Manage webhook subscriptions
-uv run strava-sensor webhook-subscription create https://your-server.com/webhook
-uv run strava-sensor webhook-subscription list
-uv run strava-sensor webhook-subscription delete 12345
+# Start webhook server without auto-subscription (manual setup required)
+uv run strava-sensor webhook-server --port 8080 --no-auto-subscribe
+
+# Clean up webhook subscription when server shuts down
+uv run strava-sensor webhook-server --port 8080 \
+    --callback-url https://your-server.com/webhook --cleanup-on-exit
 ```
+
+The webhook server automatically manages Strava webhook subscriptions:
+- **On startup**: Checks for existing subscriptions and creates/updates as needed
+- **During operation**: Receives webhook events and processes new activities automatically  
+- **On shutdown**: Optionally removes the subscription (with `--cleanup-on-exit`)
 
 ## Configuration
 

@@ -6,6 +6,7 @@ import os
 import signal
 import sys
 import time
+import urllib.parse
 
 from strava_sensor.mqtt.mqtt import MQTTClient
 from strava_sensor.sources import initialize_sources
@@ -16,8 +17,8 @@ from strava_sensor.webhook.subscription import WebhookSubscriptionManager
 _logger = logging.getLogger(__name__)
 
 
-def add_webhook_subcommands(subparsers: argparse._SubParsersAction) -> None:
-    """Add webhook-related subcommands to the argument parser.
+def add_webhook_server_command(subparsers: argparse._SubParsersAction) -> None:
+    """Add webhook server command to the argument parser.
     
     Args:
         subparsers: The subparsers object to add commands to
@@ -38,39 +39,22 @@ def add_webhook_subcommands(subparsers: argparse._SubParsersAction) -> None:
         action='store_true',
         help='Publish device data to MQTT when processing activities'
     )
+    server_parser.add_argument(
+        '--callback-url',
+        help='Public URL where Strava will send webhook events (required for auto-subscription). '
+             'Should include protocol and path, e.g., https://your-server.com/webhook'
+    )
+    server_parser.add_argument(
+        '--no-auto-subscribe',
+        action='store_true',
+        help='Disable automatic webhook subscription management'
+    )
+    server_parser.add_argument(
+        '--cleanup-on-exit',
+        action='store_true',
+        help='Remove webhook subscription when server shuts down'
+    )
     server_parser.set_defaults(func=cmd_webhook_server)
-    
-    # Subscription management commands
-    sub_parser = subparsers.add_parser(
-        'webhook-subscription',
-        help='Manage Strava webhook subscriptions'
-    )
-    sub_subparsers = sub_parser.add_subparsers(dest='subscription_action', required=True)
-    
-    # Create subscription
-    create_parser = sub_subparsers.add_parser('create', help='Create a new webhook subscription')
-    create_parser.add_argument(
-        'callback_url',
-        help='URL where Strava will send webhook events'
-    )
-    create_parser.add_argument(
-        '--verify-token',
-        help='Verification token (defaults to STRAVA_WEBHOOK_VERIFY_TOKEN env var)'
-    )
-    create_parser.set_defaults(func=cmd_create_subscription)
-    
-    # List subscriptions
-    list_parser = sub_subparsers.add_parser('list', help='List existing webhook subscriptions')
-    list_parser.set_defaults(func=cmd_list_subscriptions)
-    
-    # Delete subscription
-    delete_parser = sub_subparsers.add_parser('delete', help='Delete a webhook subscription')
-    delete_parser.add_argument('subscription_id', type=int, help='Subscription ID to delete')
-    delete_parser.set_defaults(func=cmd_delete_subscription)
-    
-    # Delete all subscriptions
-    delete_all_parser = sub_subparsers.add_parser('delete-all', help='Delete all webhook subscriptions')
-    delete_all_parser.set_defaults(func=cmd_delete_all_subscriptions)
 
 
 def cmd_webhook_server(args: argparse.Namespace) -> None:
@@ -78,6 +62,7 @@ def cmd_webhook_server(args: argparse.Namespace) -> None:
     # Get required environment variables
     verify_token = os.environ.get('STRAVA_WEBHOOK_VERIFY_TOKEN')
     client_secret = os.environ.get('STRAVA_CLIENT_SECRET')
+    client_id = os.environ.get('STRAVA_CLIENT_ID')
     
     if not verify_token:
         _logger.error('STRAVA_WEBHOOK_VERIFY_TOKEN environment variable is required')
@@ -86,6 +71,18 @@ def cmd_webhook_server(args: argparse.Namespace) -> None:
     if not client_secret:
         _logger.error('STRAVA_CLIENT_SECRET environment variable is required')
         sys.exit(1)
+    
+    # Auto-subscription management requires callback URL and client credentials
+    auto_subscribe = not args.no_auto_subscribe
+    if auto_subscribe:
+        if not args.callback_url:
+            _logger.error('--callback-url is required for automatic subscription management. '
+                         'Use --no-auto-subscribe to disable auto-management.')
+            sys.exit(1)
+        
+        if not client_id:
+            _logger.error('STRAVA_CLIENT_ID environment variable is required for auto-subscription')
+            sys.exit(1)
     
     # Initialize MQTT client if publishing is enabled
     mqtt_client: MQTTClient | None = None
@@ -114,6 +111,16 @@ def cmd_webhook_server(args: argparse.Namespace) -> None:
     sources = initialize_sources()
     processor = ActivityProcessor(sources, mqtt_client)
     
+    # Auto-manage webhook subscription
+    subscription_manager = None
+    current_subscription_id = None
+    
+    if auto_subscribe:
+        subscription_manager = WebhookSubscriptionManager(client_id, client_secret)
+        current_subscription_id = _setup_webhook_subscription(
+            subscription_manager, args.callback_url, verify_token
+        )
+    
     # Create and start webhook server
     server = WebhookServer(
         port=args.port,
@@ -129,10 +136,8 @@ def cmd_webhook_server(args: argparse.Namespace) -> None:
         # Set up signal handlers for graceful shutdown
         def signal_handler(signum, frame):
             _logger.info('Received signal %d, shutting down...', signum)
-            server.stop()
-            if mqtt_client:
-                mqtt_client.disconnect()
-            sys.exit(0)
+            _cleanup_and_exit(server, mqtt_client, subscription_manager, 
+                            current_subscription_id, args.cleanup_on_exit)
         
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
@@ -144,121 +149,88 @@ def cmd_webhook_server(args: argparse.Namespace) -> None:
     except KeyboardInterrupt:
         _logger.info('Keyboard interrupt received, shutting down...')
     finally:
-        server.stop()
-        if mqtt_client:
-            mqtt_client.disconnect()
+        _cleanup_and_exit(server, mqtt_client, subscription_manager, 
+                        current_subscription_id, args.cleanup_on_exit)
 
 
-def cmd_create_subscription(args: argparse.Namespace) -> None:
-    """Create a webhook subscription."""
-    client_id = os.environ.get('STRAVA_CLIENT_ID')
-    client_secret = os.environ.get('STRAVA_CLIENT_SECRET')
-    verify_token = args.verify_token or os.environ.get('STRAVA_WEBHOOK_VERIFY_TOKEN')
+def _setup_webhook_subscription(manager: WebhookSubscriptionManager, callback_url: str, verify_token: str) -> int | None:
+    """Set up webhook subscription, handling existing subscriptions.
     
-    if not client_id:
-        _logger.error('STRAVA_CLIENT_ID environment variable is required')
-        sys.exit(1)
-    
-    if not client_secret:
-        _logger.error('STRAVA_CLIENT_SECRET environment variable is required')
-        sys.exit(1)
-    
-    if not verify_token:
-        _logger.error('Verification token is required (--verify-token or STRAVA_WEBHOOK_VERIFY_TOKEN)')
-        sys.exit(1)
-    
-    manager = WebhookSubscriptionManager(client_id, client_secret)
-    
-    try:
-        subscription = manager.create_subscription(args.callback_url, verify_token)
-        print(f'Created subscription with ID: {subscription.id}')
-        print(f'Callback URL: {subscription.callback_url}')
-        print(f'Created at: {subscription.created_at}')
-    except Exception as e:
-        _logger.error('Failed to create subscription: %s', e)
-        sys.exit(1)
-
-
-def cmd_list_subscriptions(args: argparse.Namespace) -> None:
-    """List webhook subscriptions."""
-    client_id = os.environ.get('STRAVA_CLIENT_ID')
-    client_secret = os.environ.get('STRAVA_CLIENT_SECRET')
-    
-    if not client_id:
-        _logger.error('STRAVA_CLIENT_ID environment variable is required')
-        sys.exit(1)
-    
-    if not client_secret:
-        _logger.error('STRAVA_CLIENT_SECRET environment variable is required')
-        sys.exit(1)
-    
-    manager = WebhookSubscriptionManager(client_id, client_secret)
-    
-    try:
-        subscriptions = manager.list_subscriptions()
+    Args:
+        manager: Subscription manager instance
+        callback_url: URL for webhook callbacks
+        verify_token: Verification token
         
-        if not subscriptions:
-            print('No webhook subscriptions found.')
-            return
-        
-        print(f'Found {len(subscriptions)} subscription(s):')
-        for sub in subscriptions:
-            print(f'  ID: {sub.id}')
-            print(f'  Callback URL: {sub.callback_url}')
-            print(f'  Created: {sub.created_at}')
-            print(f'  Updated: {sub.updated_at}')
-            print()
-    except Exception as e:
-        _logger.error('Failed to list subscriptions: %s', e)
-        sys.exit(1)
-
-
-def cmd_delete_subscription(args: argparse.Namespace) -> None:
-    """Delete a webhook subscription."""
-    client_id = os.environ.get('STRAVA_CLIENT_ID')
-    client_secret = os.environ.get('STRAVA_CLIENT_SECRET')
-    
-    if not client_id:
-        _logger.error('STRAVA_CLIENT_ID environment variable is required')
-        sys.exit(1)
-    
-    if not client_secret:
-        _logger.error('STRAVA_CLIENT_SECRET environment variable is required')
-        sys.exit(1)
-    
-    manager = WebhookSubscriptionManager(client_id, client_secret)
-    
+    Returns:
+        Subscription ID if successful, None otherwise
+    """
     try:
-        manager.delete_subscription(args.subscription_id)
-        print(f'Deleted subscription {args.subscription_id}')
-    except Exception as e:
-        _logger.error('Failed to delete subscription: %s', e)
-        sys.exit(1)
-
-
-def cmd_delete_all_subscriptions(args: argparse.Namespace) -> None:
-    """Delete all webhook subscriptions."""
-    client_id = os.environ.get('STRAVA_CLIENT_ID')
-    client_secret = os.environ.get('STRAVA_CLIENT_SECRET')
-    
-    if not client_id:
-        _logger.error('STRAVA_CLIENT_ID environment variable is required')
-        sys.exit(1)
-    
-    if not client_secret:
-        _logger.error('STRAVA_CLIENT_SECRET environment variable is required')
-        sys.exit(1)
-    
-    manager = WebhookSubscriptionManager(client_id, client_secret)
-    
-    try:
-        subscriptions = manager.list_subscriptions()
-        if not subscriptions:
-            print('No subscriptions to delete.')
-            return
+        # Check for existing subscriptions
+        existing_subscriptions = manager.list_subscriptions()
         
-        manager.delete_all_subscriptions()
-        print(f'Deleted {len(subscriptions)} subscription(s)')
+        if existing_subscriptions:
+            _logger.info('Found %d existing subscription(s)', len(existing_subscriptions))
+            
+            # Check if any subscription matches our callback URL
+            matching_subscription = None
+            for sub in existing_subscriptions:
+                # Parse and compare URLs to handle minor differences
+                existing_parsed = urllib.parse.urlparse(sub.callback_url)
+                new_parsed = urllib.parse.urlparse(callback_url)
+                
+                if (existing_parsed.netloc == new_parsed.netloc and 
+                    existing_parsed.path == new_parsed.path):
+                    matching_subscription = sub
+                    break
+            
+            if matching_subscription:
+                _logger.info('Found existing subscription (ID: %d) matching callback URL: %s', 
+                           matching_subscription.id, matching_subscription.callback_url)
+                return matching_subscription.id
+            # Different callback URL - delete existing and create new
+            _logger.info('Existing subscription(s) have different callback URLs. Cleaning up...')
+            for sub in existing_subscriptions:
+                _logger.info('Deleting subscription ID %d (callback: %s)', sub.id, sub.callback_url)
+                manager.delete_subscription(sub.id)
+        
+        # Create new subscription
+        _logger.info('Creating new webhook subscription for: %s', callback_url)
+        subscription = manager.create_subscription(callback_url, verify_token)
+        _logger.info('Successfully created subscription with ID: %d', subscription.id)
+        return subscription.id
+        
     except Exception as e:
-        _logger.error('Failed to delete subscriptions: %s', e)
-        sys.exit(1)
+        _logger.error('Failed to setup webhook subscription: %s', e)
+        _logger.info('Server will continue without automatic subscription management')
+        return None
+
+
+def _cleanup_and_exit(server: WebhookServer, mqtt_client: MQTTClient | None, 
+                     subscription_manager: WebhookSubscriptionManager | None,
+                     subscription_id: int | None, cleanup_on_exit: bool) -> None:
+    """Clean up resources and exit.
+    
+    Args:
+        server: Webhook server instance
+        mqtt_client: MQTT client instance (optional)
+        subscription_manager: Subscription manager (optional)
+        subscription_id: ID of subscription to clean up (optional)
+        cleanup_on_exit: Whether to remove subscription on exit
+    """
+    # Stop server
+    server.stop()
+    
+    # Disconnect MQTT
+    if mqtt_client:
+        mqtt_client.disconnect()
+    
+    # Clean up subscription if requested
+    if cleanup_on_exit and subscription_manager and subscription_id:
+        try:
+            _logger.info('Removing webhook subscription (ID: %d)...', subscription_id)
+            subscription_manager.delete_subscription(subscription_id)
+            _logger.info('Webhook subscription removed')
+        except Exception as e:
+            _logger.warning('Failed to remove webhook subscription: %s', e)
+    
+    sys.exit(0)
