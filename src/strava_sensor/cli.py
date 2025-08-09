@@ -22,6 +22,7 @@ def setup_logging():
     daiquiri.setup(level=logging.DEBUG)
     daiquiri.set_default_log_levels(
         [
+            ('httpcore', 'INFO'),
             ('paho', 'INFO'),
             ('stravalib', 'INFO'),
             ('urllib3.connectionpool', 'INFO'),

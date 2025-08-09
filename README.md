@@ -9,6 +9,7 @@ A Python tool that extracts device battery information from sports activity FIT 
 - **Home Assistant integration**: Auto-discovery MQTT sensors with proper device classes
 - **Robust parsing**: Handle corrupted files and various FIT file formats gracefully
 - **Modern Python**: Built with Python 3.13, Pydantic v2, and comprehensive type hints
+- **Strava Webhook Listener**: Optional FastAPI server to automatically process new Strava activities as they are created
 
 ## Quick Start
 
@@ -75,6 +76,10 @@ export GARMIN_PASSWORD="your_password"
 
 # Required for Strava integration
 export STRAVA_REFRESH_TOKEN="your_refresh_token"
+export STRAVA_CLIENT_ID="your_strava_app_client_id"         # required for webhook subscription
+export STRAVA_CLIENT_SECRET="your_strava_app_client_secret" # required for webhook subscription
+export STRAVA_VERIFY_TOKEN="some_verification_string"       # used by Strava to verify callback
+export STRAVA_WEBHOOK_URL="https://your.public/url/strava/webhook" # e.g. smee.io proxy URL during dev
 
 # Required for MQTT publishing
 export MQTT_BROKER_URL="mqtt://your-broker:1883"
@@ -89,6 +94,38 @@ To use Strava integration, you need to set up API access:
 1. Create a Strava application at https://www.strava.com/settings/api
 2. Get your refresh token following this guide: https://medium.com/@lejczak.learn/get-your-strava-activity-data-using-python-2023-%EF%B8%8F-b03b176965d0
 3. Set the `STRAVA_REFRESH_TOKEN` environment variable
+4. (Optional) For automatic processing via webhooks: expose a public HTTPS endpoint (during development use a tunneling tool like localtunnel). Set STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET and STRAVA_WEBHOOK_URL. STRAVA_VERIFY_TOKEN is optional; if omitted a random one is generated and logged. Start the listener with:
+
+```bash
+uv run strava-webhook-listener
+```
+
+To create a temporary public URL with localtunnel:
+
+```bash
+npm install -g localtunnel   # if not already installed
+lt --port 8000 --subdomain mystravawebhook
+
+# In another terminal:
+export STRAVA_WEBHOOK_URL="https://mystravawebhook.loca.lt/strava/webhook"
+uv run strava-webhook-listener
+```
+
+Alternatively use the helper script (simplified; just starts the tunnel) then export the URL manually:
+
+```bash
+scripts/run-localtunnel.sh mystravawebhook
+# When it prints: your url is: https://mystravawebhook.loca.lt
+export STRAVA_WEBHOOK_URL="https://mystravawebhook.loca.lt/strava/webhook"
+uv run strava-webhook-listener
+```
+
+The listener will:
+
+1. Ensure a Strava push subscription exists for your callback URL on startup
+2. Respond to Strava's verification challenge (auto-generating a token if not provided)
+3. When an activity is created, fetch the activity via Strava + downstream source (e.g., Garmin), parse devices and publish to MQTT (if configured)
+4. Deregister the subscription on shutdown
 
 ## How It Works
 

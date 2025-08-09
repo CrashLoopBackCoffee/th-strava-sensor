@@ -12,12 +12,15 @@ dependencies = [
     "pydantic>=2.11.4",
     "requests>=2.32.3",
     "stravalib>=2.3",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
 ]
 
 [dependency-groups]
 dev = [
     "distlib>=0.3.9",
     "filelock>=3.18.0",
+    "httpx>=0.27.2",
     "platformdirs>=4.3.7",
     "pre-commit-uv>=4.1.4",
     "pre-commit>=4.2.0",
@@ -25,6 +28,7 @@ dev = [
     "ruff>=0.11.8",
     "yamllint>=1.37.1",
     "pytest>=8.3.5",
+    "pytest-asyncio>=1.1.0",
     "pytest-cov>=6.1.1",
 ]
 
@@ -34,6 +38,7 @@ build-backend = "hatchling.build"
 
 [project.scripts]
 parse-activity = "strava_sensor.cli:main"
+strava-webhook-listener = "strava_sensor.webhook_server:main"
 
 [tool.ruff]
 line-length = 100
