@@ -29,6 +29,8 @@ class MQTTClient:
             self.client.tls_set()
 
         self.client.on_connect = self._on_connect
+        self.client.on_disconnect = self._on_disconnect
+        self.client.on_socket_close = self._on_socket_close
 
         self.client.connect(parts.hostname, parts.port or 1883)
         self.client.loop_start()
@@ -82,6 +84,28 @@ class MQTTClient:
         properties: paho.mqtt.properties.Properties | None = None,
     ):
         _logger.info('Connected with result code %s', reason_code)
+
+    def _on_disconnect(
+        self,
+        client: paho.mqtt.client.Client,
+        userdata: t.Any,
+        disconnect_flags: paho.mqtt.client.DisconnectFlags,
+        reason_code: paho.mqtt.reasoncodes.ReasonCode,
+        properties: paho.mqtt.properties.Properties | None = None,
+    ):
+        _logger.warning('Disconnected with result code %s', reason_code)
+        if reason_code != 0:
+            _logger.warning(
+                'Unexpected MQTT disconnection, automatic reconnection will be attempted'
+            )
+
+    def _on_socket_close(
+        self,
+        client: paho.mqtt.client.Client,
+        userdata: t.Any,
+        socket,
+    ):
+        _logger.warning('MQTT socket closed unexpectedly')
 
     @property
     def connected(self):
