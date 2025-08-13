@@ -90,7 +90,14 @@ def main() -> None:
         mqtt_password = os.environ['MQTT_PASSWORD']
         mqtt_client = MQTTClient()
         mqtt_client.connect(mqtt_broker_url, mqtt_username, mqtt_password)
+
+        # Wait for connection with timeout to prevent infinite hangs
+        timeout = 30  # 30 seconds
+        start_time = time.time()
         while not mqtt_client.connected:
+            if time.time() - start_time > timeout:
+                _logger.error('MQTT connection timeout after %s seconds', timeout)
+                sys.exit(1)
             _logger.debug('Waiting for MQTT connection')
             time.sleep(0.1)
 
