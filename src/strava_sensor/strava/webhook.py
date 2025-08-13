@@ -2,7 +2,6 @@ import asyncio
 import logging
 import os
 import secrets
-import threading
 
 from typing import Any, Awaitable, Callable
 
@@ -28,7 +27,7 @@ class StravaWebhookManager:
         self.verify_token = os.environ.get('STRAVA_VERIFY_TOKEN')
         self.callback_url = os.environ.get('STRAVA_WEBHOOK_URL')
         self._subscription_id: int | None = None
-        self._lock = threading.Lock()
+        self._lock = asyncio.Lock()
 
     # ----- internal helpers -----
     def _auth_params(self) -> dict[str, str]:
@@ -52,7 +51,7 @@ class StravaWebhookManager:
         if not self.verify_token:
             self.verify_token = secrets.token_urlsafe(24)
             _logger.info('Generated STRAVA_VERIFY_TOKEN %s', self.verify_token)
-        with self._lock:
+        async with self._lock:
             if self._subscription_id is not None:
                 return self._subscription_id
             existing = await self._find_existing_subscription_id()

@@ -8,7 +8,6 @@ import asyncio
 import contextlib
 import logging
 import os
-import threading
 import time
 
 from typing import Any
@@ -133,13 +132,13 @@ async def handle_event(payload: dict[str, Any]):
     object_id = payload.get('object_id')
     _logger.debug('Received webhook payload %s', payload)
     if aspect_type == 'create' and object_type == 'activity' and object_id:
-        thread = threading.Thread(target=_process_activity, args=(int(object_id),), daemon=True)
-        thread.start()
+        # Use asyncio task instead of thread for better resource management
+        asyncio.create_task(_process_activity_async(int(object_id)))
         return {'status': 'processing'}
     return {'status': 'ignored'}
 
 
-def _process_activity(activity_id: int) -> None:
+async def _process_activity_async(activity_id: int) -> None:
     _logger.info('Processing Strava activity %s from webhook', activity_id)
     try:
         activity_url = f'https://www.strava.com/activities/{activity_id}'
@@ -153,18 +152,26 @@ def _process_activity(activity_id: int) -> None:
             _logger.error('Strava source not initialized; cannot process activity %s', activity_id)
             return
         _logger.info('Reading activity %s from Strava', activity_url)
-        fit_bytes = strava_source.read_activity(activity_url)
+
+        # Run the synchronous operations in a thread pool to avoid blocking the event loop
+        loop = asyncio.get_event_loop()
+        fit_bytes = await loop.run_in_executor(None, strava_source.read_activity, activity_url)
         _logger.debug('Read %d bytes from Strava activity %s', len(fit_bytes), activity_id)
-        fitfile = FitFile(fit_bytes)
+
+        fitfile = await loop.run_in_executor(None, FitFile, fit_bytes)
         _logger.debug('Parsed FIT file for activity %s', activity_id)
+
         devices_status = fitfile.get_devices_status()
+
         # Reuse persistent MQTT client if available
         if _state.mqtt_client:
             start = time.time()
             while not _state.mqtt_client.connected and time.time() - start < 5:
-                time.sleep(0.1)
+                await asyncio.sleep(0.1)
+
         if not devices_status:
             _logger.info('No devices found in activity %s', activity_id)
+
         for device_status in devices_status:
             _logger.info(
                 'Publishing device %s battery %s%%',
