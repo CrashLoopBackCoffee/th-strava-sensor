@@ -15,6 +15,8 @@ class MQTTClient:
     def __init__(self):
         self.client = paho.mqtt.client.Client(paho.mqtt.enums.CallbackAPIVersion.VERSION2)
 
+        # Enable automatic reconnection with exponential backoff
+        self.client.reconnect_delay_set(min_delay=1, max_delay=120)
         self.client.enable_logger()
 
     def connect(self, broker_url: str, username: str, password: str):
