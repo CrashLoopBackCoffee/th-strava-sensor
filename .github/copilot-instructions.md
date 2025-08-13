@@ -54,7 +54,7 @@ Then run dependency sync or checks (e.g., `uv sync`, pre-commit hooks). This avo
 Edit `MODEL_OVERRIDE` in `fitfile/model.py`: nested dict keyed by lowercase manufacturer -> product code -> friendly name. Keep keys as strings. Do not alter validator logic.
 
 ### 7. Tests & Quality
-- Always run `uv run ./scripts/run-all-checks.sh` before committing (aggregates pre-commit hooks + tests). Re-run if it auto-fixes.
+- **Linting & Checks**: Always run `uv run ./scripts/run-all-checks.sh` before committing (aggregates pre-commit hooks + tests). Re-run if it auto-fixes.
 - Let pre-commit auto-fix first; only hand-edit style issues if still failing after a second run.
 - Full suite: `uv run pre-commit run --all-files --show-diff-on-failure`. Direct tests: `uv run pytest -v`.
 - Keep FIT fixtures minimal in `tests/fixtures/`.
