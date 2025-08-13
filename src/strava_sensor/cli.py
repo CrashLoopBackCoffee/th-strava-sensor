@@ -45,7 +45,7 @@ def initialize_sources() -> list[BaseSource]:
 
     # Strava doesn't support downloading FIT files directly.
     # So we need to create it last and give it downstream sources.
-    strava_refresh_token = os.environ['STRAVA_REFRESH_TOKEN']
+    strava_refresh_token = os.environ.get('STRAVA_REFRESH_TOKEN')
     if strava_refresh_token:
         client = stravalib.Client(
             refresh_token=strava_refresh_token,
