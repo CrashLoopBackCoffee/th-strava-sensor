@@ -134,7 +134,12 @@ def main() -> None:
             _logger.info('---')
 
             if mqtt_client:
-                device_status.publish_on_mqtt(mqtt_client)
+                success = device_status.publish_on_mqtt(mqtt_client)
+                if not success:
+                    _logger.warning(
+                        'Failed to publish MQTT data for device %s',
+                        device_status.serial_number,
+                    )
 
         # If we are publishing to MQTT stay alive until interrupted
         if mqtt_client:

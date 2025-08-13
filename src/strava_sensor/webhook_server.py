@@ -179,7 +179,12 @@ async def _process_activity_async(activity_id: int) -> None:
                 device_status.battery_level,
             )
             if _state.mqtt_client:
-                device_status.publish_on_mqtt(_state.mqtt_client)
+                success = device_status.publish_on_mqtt(_state.mqtt_client)
+                if not success:
+                    _logger.warning(
+                        'Failed to publish MQTT data for device %s',
+                        device_status.serial_number,
+                    )
     # Do not disconnect persistent client here
     except (NotAFitFileError, CorruptedFitFileError) as e:
         _logger.error('FIT parse error for activity %s: %s', activity_id, e)

@@ -1,4 +1,5 @@
 import logging
+import time
 import typing as t
 import urllib.parse
 
@@ -34,8 +35,40 @@ class MQTTClient:
         self.client.disconnect()
         self.client.loop_stop()
 
-    def publish(self, topic: str, payload: str):
-        self.client.publish(topic, payload)
+    def publish(self, topic: str, payload: str, retries: int = 3) -> bool:
+        """Publish a message with retry logic and error handling.
+
+        Args:
+            topic: MQTT topic to publish to
+            payload: Message payload
+            retries: Number of retry attempts (default: 3)
+
+        Returns:
+            True if publish succeeded, False otherwise
+        """
+        for attempt in range(retries):
+            try:
+                if not self.connected:
+                    _logger.warning('MQTT not connected for publish attempt %s', attempt + 1)
+                    if attempt < retries - 1:
+                        time.sleep(2**attempt)  # Exponential backoff
+                    continue
+
+                result = self.client.publish(topic, payload)
+                if result.rc == paho.mqtt.client.MQTT_ERR_SUCCESS:
+                    _logger.debug('Successfully published to topic %s', topic)
+                    return True
+
+                _logger.warning('Publish attempt %s failed with code %s', attempt + 1, result.rc)
+
+            except Exception as e:
+                _logger.warning('Publish exception on attempt %s: %s', attempt + 1, e)
+
+            if attempt < retries - 1:
+                time.sleep(2**attempt)  # Exponential backoff: 1s, 2s, 4s
+
+        _logger.error('Failed to publish to %s after %s attempts', topic, retries)
+        return False
 
     # The callback for when the client receives a CONNACK response from the server.
     def _on_connect(

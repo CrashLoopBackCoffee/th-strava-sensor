@@ -71,10 +71,18 @@ class DeviceStatus(pydantic.BaseModel):
         self.device_type = str(self.model_extra.get(device_type_key, self.device_type))
         return self
 
-    def publish_on_mqtt(self, mqtt_client: MQTTClient):
+    def publish_on_mqtt(self, mqtt_client: MQTTClient) -> bool:
+        """Publish device status and Home Assistant discovery to MQTT.
+
+        Args:
+            mqtt_client: MQTT client instance
+
+        Returns:
+            True if both publishes succeeded, False otherwise
+        """
         # Publish device status
         mqtt_path = f'strava/{self.serial_number}/status'
-        mqtt_client.publish(mqtt_path, self.model_dump_json())
+        status_success = mqtt_client.publish(mqtt_path, self.model_dump_json())
 
         # Publish home assistant discovery information
         device_id = f'strava-{self.serial_number}'
@@ -126,4 +134,10 @@ class DeviceStatus(pydantic.BaseModel):
 
         discovery_topic = f'homeassistant/device/strava-{self.serial_number}/config'
         _logger.debug('Publishing discovery topic: %s', discovery_topic)
-        mqtt_client.publish(discovery_topic, json.dumps(payload))
+        discovery_success = mqtt_client.publish(discovery_topic, json.dumps(payload))
+
+        if not status_success or not discovery_success:
+            _logger.error('Failed to publish MQTT data for device %s', self.serial_number)
+            return False
+
+        return True
