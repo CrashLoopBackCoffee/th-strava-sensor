@@ -9,6 +9,9 @@ from strava_sensor.mqtt.mqtt import MQTTClient
 
 _logger = logging.getLogger(__name__)
 
+# Home Assistant discovery payload constants
+STRAVA_TOOL_VERSION = '0.0.1'
+
 MODEL_OVERRIDE = {
     'favero_electronics': {
         '22': 'assioma pro mx-2 spd',
@@ -86,7 +89,7 @@ class DeviceStatus(pydantic.BaseModel):
             },
             'o': {
                 'name': 'Strava-Tool',
-                'sw': '0.0.1',
+                'sw': STRAVA_TOOL_VERSION,
             },
             'cmps': {
                 f'{device_id}_voltage': {
