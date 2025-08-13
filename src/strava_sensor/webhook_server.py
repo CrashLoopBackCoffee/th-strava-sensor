@@ -104,7 +104,10 @@ app = fastapi.FastAPI(lifespan=lifespan)
 def healthz():  # simple liveness/readiness probe
     # Try to expose subscription id if already ensured; do not trigger ensure side effects here.
     sub_id = getattr(manager_singleton, 'current_subscription_id', None)
-    return {'status': 'ok', 'subscription_id': sub_id}
+    mqtt_status = (
+        'connected' if _state.mqtt_client and _state.mqtt_client.connected else 'disconnected'
+    )
+    return {'status': 'ok', 'subscription_id': sub_id, 'mqtt_status': mqtt_status}
 
 
 @app.get('/strava/webhook')
