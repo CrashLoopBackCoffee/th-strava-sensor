@@ -26,7 +26,6 @@ class MQTTClient:
             self.client.tls_set()
 
         self.client.on_connect = self._on_connect
-        self.client.on_message = self._on_message
 
         self.client.connect(parts.hostname, parts.port or 1883)
         self.client.loop_start()
@@ -48,18 +47,6 @@ class MQTTClient:
         properties: paho.mqtt.properties.Properties | None = None,
     ):
         _logger.info('Connected with result code %s', reason_code)
-        # Subscribing in on_connect() means that if we lose the connection and
-        # reconnect then subscriptions will be renewed.
-        client.subscribe('$SYS/#')
-
-    # The callback for when a PUBLISH message is received from the server.
-    def _on_message(
-        self,
-        client: paho.mqtt.client.Client,
-        userdata: t.Any,
-        msg: paho.mqtt.client.MQTTMessage,
-    ):
-        pass
 
     @property
     def connected(self):
