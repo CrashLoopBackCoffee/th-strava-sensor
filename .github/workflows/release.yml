@@ -43,10 +43,14 @@ jobs:
         id: tag_check
         run: |
           VERSION="${{ steps.cliff.outputs.version }}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          # Remove any existing 'v' prefix to normalize the version
+          VERSION="${VERSION#v}"
+          TAG="v$VERSION"
 
-          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
