@@ -9,7 +9,7 @@ repo = "th-strava-sensor"
 
 # A Tera template to be rendered as the changelog's header.
 # See https://keats.github.io/tera/docs/#introduction
-header = ""
+header = "# Changelog\n"
 
 # A Tera template to be rendered for each release in the changelog.
 # See https://keats.github.io/tera/docs/#introduction
@@ -18,15 +18,16 @@ body = """
   https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}
 {%- endmacro -%}
 
-{% if version %}\
+{% if version %}
     {% if previous.version %}\
-        ## [{{ version | trim_start_matches(pat="v") }}]\
-          ({{ self::remote_url() }}/compare/{{ previous.version }}..{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
+
+## [{{ version | trim_start_matches(pat="v") }}]({{ self::remote_url() }}/compare/{{ previous.version }}..{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
     {% else %}\
-        ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+
+## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
     {% endif %}\
 {% else %}\
-    ## [unreleased]
+## [unreleased]
 {% endif %}\
 
 {% for group, commits in commits | group_by(attribute="group") %}
