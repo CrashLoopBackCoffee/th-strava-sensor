@@ -1,9 +1,20 @@
 # Changelog
 
+## [0.1.2](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v0.1.1..v0.1.2) - 2025-08-15
+
+### 🐛 Bug Fixes
+
+* fix: prevent double 'v' prefix in release workflow tag creation by @tobiashenkel in [#48](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/48)
+
+### 🔧 Other Changes
+
+* fix: remove 'v' prefix from pyproject.toml version in changelog workflow by @tobiashenkel in [#49](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/49)
+
 ## [0.1.1](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v0.1.0..v0.1.1) - 2025-08-15
 
 ### 🔧 Other Changes
 
+* chore: prepare release v0.1.1 by @tobiashenkel in [#45](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/45)
 * fix: improve changelog formatting in git-cliff config by @tobiashenkel in [#46](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/46)
 * chore(deps): lock file maintenance by @tobiashenkel in [#22](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/22)
 * chore(deps): update actions/checkout action to v5 by @tobiashenkel in [#23](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/23)
