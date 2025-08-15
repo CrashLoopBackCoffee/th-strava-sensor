@@ -55,29 +55,36 @@ jobs:
 
       - name: Create Pull Request
         if: steps.changes.outputs.has_changes == 'true'
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: |
-            chore: prepare release ${{ steps.changelog.outputs.version }}
+        run: |
+          # Create and switch to new branch
+          BRANCH_NAME="release/${{ steps.changelog.outputs.version }}"
+          git checkout -b "$BRANCH_NAME"
 
-            - Update CHANGELOG.md with latest changes
-            - Bump version to ${{ steps.changelog.outputs.version }}
-          title: "chore: prepare release ${{ steps.changelog.outputs.version }}"
-          body: |
-            ## Release Preparation
+          # Commit changes
+          git add .
+          git commit -m "chore: prepare release ${{ steps.changelog.outputs.version }}
 
-            This PR prepares for release `${{ steps.changelog.outputs.version }}` by:
+          - Update CHANGELOG.md with latest changes
+          - Bump version to ${{ steps.changelog.outputs.version }}"
 
-            - 📝 Updating CHANGELOG.md with all merged PRs since last release
-            - 🔢 Bumping version to `${{ steps.changelog.outputs.version }}` (automatically determined by git-cliff)
+          # Push branch
+          git push origin "$BRANCH_NAME"
 
-            Once this PR is merged, a new GitHub release will be automatically created.
+          # Create PR using gh CLI
+          gh pr create \
+            --title "chore: prepare release ${{ steps.changelog.outputs.version }}" \
+            --body "## Release Preparation
 
-            ---
-            🤖 This PR was automatically created by the changelog workflow.
-          branch: release/${{ steps.changelog.outputs.version }}
-          labels: |
-            release
-            automated
-          draft: false
+          This PR prepares for release \`${{ steps.changelog.outputs.version }}\` by:
+
+          - 📝 Updating CHANGELOG.md with all merged PRs since last release
+          - 🔢 Bumping version to \`${{ steps.changelog.outputs.version }}\` (automatically determined by git-cliff)
+
+          Once this PR is merged, a new GitHub release will be automatically created.
+
+          ---
+          🤖 This PR was automatically created by the changelog workflow." \
+            --label "release,automated" \
+            --base main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
