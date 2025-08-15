@@ -4,6 +4,13 @@ on:
   pull_request:
     types: [closed, labeled]
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_regenerate:
+        description: 'Force regenerate changelog'
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write
