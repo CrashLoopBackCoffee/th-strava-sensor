@@ -1,10 +1,21 @@
 # Changelog
 
+## [0.1.4](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v0.1.3..v0.1.4) - 2025-08-15
+
+### 🐛 Bug Fixes
+
+* Use git cliff --unreleased by @tobiashenkel in [#54](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/54)
+* Only show the latest release in github release by @tobiashenkel in [#53](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/53)
+
 ## [0.1.3](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v0.1.2..v0.1.3) - 2025-08-15
 
 ### 🐛 Bug Fixes
 
 * fix: remove duplicate headers in GitHub release body by @tobiashenkel in [#51](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/51)
+
+### 🔧 Other Changes
+
+* chore: prepare release v0.1.3 by @tobiashenkel in [#50](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/50)
 
 ## [0.1.2](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v0.1.1..v0.1.2) - 2025-08-15
 
