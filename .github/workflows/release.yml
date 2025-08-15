@@ -35,7 +35,7 @@ jobs:
         uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
-          args: --bump --strip all
+          args: --bump --strip header
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -84,10 +84,7 @@ jobs:
         with:
           tag_name: ${{ steps.tag_check.outputs.tag }}
           name: Release ${{ steps.tag_check.outputs.version }}
-          body: |
-            # Release ${{ steps.tag_check.outputs.version }}
-
-            ${{ steps.cliff.outputs.content }}
+          body: ${{ steps.cliff.outputs.content }}
           files: |
             dist/*.whl
             dist/*.tar.gz
