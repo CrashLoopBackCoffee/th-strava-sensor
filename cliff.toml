@@ -3,7 +3,7 @@
 
 [remote.github]
 owner = "CrashLoopBackCoffee"
-repo = "strava-sensor"
+repo = "th-strava-sensor"
 
 [changelog]
 
