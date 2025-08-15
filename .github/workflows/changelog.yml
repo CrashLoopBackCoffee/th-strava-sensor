@@ -45,9 +45,11 @@ jobs:
       - name: Update pyproject.toml version
         run: |
           # Update pyproject.toml with the new version from git-cliff
-          NEW_VERSION="${{ steps.changelog.outputs.version }}"
+          RAW_VERSION="${{ steps.changelog.outputs.version }}"
+          # Remove any 'v' prefix for pyproject.toml (Python packages should not have 'v' prefix)
+          NEW_VERSION="${RAW_VERSION#v}"
           sed -i "s/^version = .*/version = \"$NEW_VERSION\"/" pyproject.toml
-          echo "Updated version to $NEW_VERSION"
+          echo "Updated version to $NEW_VERSION (from $RAW_VERSION)"
 
       - name: Check for changes
         id: changes
