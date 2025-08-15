@@ -46,15 +46,14 @@ jobs:
       - name: Extract new version and update pyproject.toml
         id: version
         run: |
-          # Extract new version from git-cliff context output
-          CONTEXT_JSON=$(git-cliff --config cliff.toml --bump --context --unreleased)
-          NEW_VERSION=$(echo "$CONTEXT_JSON" | jq -r '.version // .releases[0].version // empty' 2>/dev/null || echo "")
+          # Get the version from git-cliff-action output
+          NEW_VERSION="${{ steps.changelog.outputs.version }}"
 
           if [[ -z "$NEW_VERSION" || "$NEW_VERSION" == "null" ]]; then
             # Fallback: patch bump if git-cliff can't determine version
             CURRENT_VERSION="${{ steps.current_version.outputs.version }}"
             NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{print $1"."$2"."($3+1)}')
-            echo "Warning: Could not determine version from git-cliff, using patch bump: $CURRENT_VERSION -> $NEW_VERSION"
+            echo "Warning: Could not determine version from git-cliff action, using patch bump: $CURRENT_VERSION -> $NEW_VERSION"
           fi
 
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
