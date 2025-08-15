@@ -1,0 +1,73 @@
+# git-cliff ~ configuration file
+# https://git-cliff.org/docs/configuration
+[changelog]
+
+# A Tera template to be rendered as the changelog's header.
+# See https://keats.github.io/tera/docs/#introduction
+header = ""
+
+# A Tera template to be rendered for each release in the changelog.
+# See https://keats.github.io/tera/docs/#introduction
+body = """
+{%- macro remote_url() -%}
+  https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}
+{%- endmacro -%}
+
+{% if version %}\
+    {% if previous.version %}\
+        ## [{{ version | trim_start_matches(pat="v") }}]\
+          ({{ self::remote_url() }}/compare/{{ previous.version }}..{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}
+    {% else %}\
+        ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+    {% endif %}\
+{% else %}\
+    ## [unreleased]
+{% endif %}\
+
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim }}
+{% for commit in commits %}
+* {{ commit.remote.pr_title | default(value=commit.message | split(pat="\n") | first) }} by @{{ commit.remote.username }} in [#{{ commit.remote.pr_number }}]({{ self::remote_url() }}/pull/{{ commit.remote.pr_number }})
+{%- endfor %}
+
+{% endfor %}
+"""
+# Remove leading and trailing whitespaces from the changelog's body.
+trim = true
+# An array of regex based postprocessors to modify the changelog.
+postprocessors = []
+
+
+[git]
+# Parse commits according to the conventional commits specification.
+# See https://www.conventionalcommits.org
+conventional_commits = false
+# Exclude commits that do not match the conventional commits specification.
+filter_unconventional = true
+# Split commits on newlines, treating each line as an individual commit.
+split_commits = false
+# An array of regex based parsers to modify commit messages prior to further processing.
+commit_preprocessors = [{ pattern = '\((\w+\s)?#([0-9]+)\)', replace = "" }]
+# Exclude commits that are not matched by any commit parser.
+filter_commits = true
+# Array of commit parsers to extract information from commit messages
+commit_parsers = [
+    # Classify commits by GitHub PR labels
+    { field = "remote.pr_labels", pattern = "breaking", group = "<!-- 0 -->🚨 Breaking Changes" },
+    { field = "remote.pr_labels", pattern = "security", group = "<!-- 1 -->🔒 Security" },
+    { field = "remote.pr_labels", pattern = "enhancement", group = "<!-- 2 -->✨ Enhancements" },
+    { field = "remote.pr_labels", pattern = "bug", group = "<!-- 3 -->🐛 Bug Fixes" },
+    { field = "remote.pr_labels", pattern = "documentation", group = "<!-- 4 -->📖 Documentation" },
+    # Fallback for PRs without specific labels
+    { message = "^Merge pull request #([0-9]+)", group = "<!-- 5 -->🔧 Other Changes" },
+]
+# Order releases topologically instead of chronologically.
+topo_order = false
+# Order of commits in each group/release within the changelog.
+# Allowed values: newest, oldest
+sort_commits = "newest"
+
+[bump]
+features_always_bump_minor = true
+breaking_always_bump_major = true
+initial_tag = "0.1.0"
