@@ -1,11 +1,21 @@
 # Changelog
 
+## [0.1.5](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v0.1.4..v0.1.5) - 2025-08-15
+
+### 🚨 Breaking Changes
+
+* Add strava webhook support by @tobiashenkel in [#24](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/24)
+
 ## [0.1.4](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v0.1.3..v0.1.4) - 2025-08-15
 
 ### 🐛 Bug Fixes
 
 * Use git cliff --unreleased by @tobiashenkel in [#54](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/54)
 * Only show the latest release in github release by @tobiashenkel in [#53](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/53)
+
+### 🔧 Other Changes
+
+* chore: prepare release v0.1.4 by @tobiashenkel in [#52](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/52)
 
 ## [0.1.3](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v0.1.2..v0.1.3) - 2025-08-15
 
