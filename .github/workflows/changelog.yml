@@ -1,0 +1,102 @@
+name: Generate Changelog
+
+on:
+  pull_request:
+    types: [closed, labeled]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate-changelog:
+    if: >
+      (github.event.action == 'closed' && github.event.pull_request.merged == true) ||
+      (github.event.action == 'labeled' && contains(fromJson('["breaking", "enhancement", "bug", "documentation", "security"]'), github.event.label.name))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Get current version
+        id: current_version
+        run: |
+          CURRENT_VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "//' | sed 's/"//')
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog and bump version
+        id: changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --bump
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OUTPUT: CHANGELOG.md
+
+      - name: Extract new version and update pyproject.toml
+        id: version
+        run: |
+          # Extract new version from git-cliff context output
+          CONTEXT_JSON=$(git-cliff --config cliff.toml --bump --context --unreleased)
+          NEW_VERSION=$(echo "$CONTEXT_JSON" | jq -r '.version // .releases[0].version // empty' 2>/dev/null || echo "")
+
+          if [[ -z "$NEW_VERSION" || "$NEW_VERSION" == "null" ]]; then
+            # Fallback: patch bump if git-cliff can't determine version
+            CURRENT_VERSION="${{ steps.current_version.outputs.version }}"
+            NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{print $1"."$2"."($3+1)}')
+            echo "Warning: Could not determine version from git-cliff, using patch bump: $CURRENT_VERSION -> $NEW_VERSION"
+          fi
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+          # Update pyproject.toml version
+          CURRENT_VERSION="${{ steps.current_version.outputs.version }}"
+          sed -i "s/version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/" pyproject.toml
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: |
+            chore: prepare release ${{ steps.version.outputs.new_version }}
+
+            - Update CHANGELOG.md with latest changes
+            - Bump version from ${{ steps.current_version.outputs.version }} to ${{ steps.version.outputs.new_version }}
+          title: "chore: prepare release ${{ steps.version.outputs.new_version }}"
+          body: |
+            ## Release Preparation
+
+            This PR prepares for release `${{ steps.version.outputs.new_version }}` by:
+
+            - 📝 Updating CHANGELOG.md with all merged PRs since last release
+            - 🔢 Bumping version from `${{ steps.current_version.outputs.version }}` to `${{ steps.version.outputs.new_version }}` (automatically determined by git-cliff)
+
+            Once this PR is merged, a new GitHub release will be automatically created.
+
+            ---
+            🤖 This PR was automatically created by the changelog workflow.
+          branch: release/${{ steps.version.outputs.new_version }}
+          labels: |
+            release
+            automated
+          draft: false

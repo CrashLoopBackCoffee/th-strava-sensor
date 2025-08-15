@@ -1,5 +1,10 @@
 # git-cliff ~ configuration file
 # https://git-cliff.org/docs/configuration
+
+[remote.github]
+owner = "CrashLoopBackCoffee"
+repo = "strava-sensor"
+
 [changelog]
 
 # A Tera template to be rendered as the changelog's header.
