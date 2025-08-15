@@ -88,12 +88,12 @@ jobs:
           # Push branch (force-with-lease is safe for both new and existing)
           git push origin "$BRANCH_NAME" --force-with-lease
 
-          # Check if PR exists and create or update accordingly
-          if gh pr view "$BRANCH_NAME" >/dev/null 2>&1; then
-            echo "Updating existing PR"
+          # Check if open PR exists and create or update accordingly
+          if gh pr view "$BRANCH_NAME" --json state --jq '.state' 2>/dev/null | grep -q "OPEN"; then
+            echo "Updating existing open PR"
             gh pr edit "$BRANCH_NAME" --title "$PR_TITLE" --body "$PR_BODY"
           else
-            echo "Creating new PR"
+            echo "Creating new PR (no open PR found)"
             gh pr create \
               --title "$PR_TITLE" \
               --body "$PR_BODY" \
