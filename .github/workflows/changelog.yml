@@ -27,12 +27,6 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-      - name: Get current version
-        id: current_version
-        run: |
-          CURRENT_VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "//' | sed 's/"//')
-          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-
       - name: Generate changelog and bump version
         id: changelog
         uses: orhun/git-cliff-action@v4
@@ -46,10 +40,9 @@ jobs:
       - name: Update pyproject.toml version
         run: |
           # Update pyproject.toml with the new version from git-cliff
-          CURRENT_VERSION="${{ steps.current_version.outputs.version }}"
           NEW_VERSION="${{ steps.changelog.outputs.version }}"
-          sed -i "s/version = \"$CURRENT_VERSION\"/version = \"$NEW_VERSION\"/" pyproject.toml
-          echo "Updated version from $CURRENT_VERSION to $NEW_VERSION"
+          sed -i "s/^version = .*/version = \"$NEW_VERSION\"/" pyproject.toml
+          echo "Updated version to $NEW_VERSION"
 
       - name: Check for changes
         id: changes
@@ -69,7 +62,7 @@ jobs:
             chore: prepare release ${{ steps.changelog.outputs.version }}
 
             - Update CHANGELOG.md with latest changes
-            - Bump version from ${{ steps.current_version.outputs.version }} to ${{ steps.changelog.outputs.version }}
+            - Bump version to ${{ steps.changelog.outputs.version }}
           title: "chore: prepare release ${{ steps.changelog.outputs.version }}"
           body: |
             ## Release Preparation
@@ -77,7 +70,7 @@ jobs:
             This PR prepares for release `${{ steps.changelog.outputs.version }}` by:
 
             - 📝 Updating CHANGELOG.md with all merged PRs since last release
-            - 🔢 Bumping version from `${{ steps.current_version.outputs.version }}` to `${{ steps.changelog.outputs.version }}` (automatically determined by git-cliff)
+            - 🔢 Bumping version to `${{ steps.changelog.outputs.version }}` (automatically determined by git-cliff)
 
             Once this PR is merged, a new GitHub release will be automatically created.
 
