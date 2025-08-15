@@ -2,7 +2,7 @@ name: Generate Changelog
 
 on:
   pull_request:
-    types: [closed, labeled]
+    types: [closed]
     branches: [main]
   workflow_dispatch:
     inputs:
@@ -18,9 +18,7 @@ permissions:
 
 jobs:
   generate-changelog:
-    if: >
-      (github.event.action == 'closed' && github.event.pull_request.merged == true) ||
-      (github.event.action == 'labeled' && contains(fromJson('["breaking", "enhancement", "bug", "documentation", "security"]'), github.event.label.name))
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
