@@ -35,7 +35,7 @@ jobs:
         uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
-          args: --bump --strip header
+          args: --bump --latest --strip header
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
