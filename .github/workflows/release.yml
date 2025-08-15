@@ -1,0 +1,96 @@
+name: Create Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  release:
+    if: >
+      github.event.pull_request.merged == true &&
+      (contains(github.event.pull_request.head.ref, 'release/') ||
+       contains(github.event.pull_request.labels.*.name, 'release'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Get version and generate release notes
+        id: cliff
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --latest --strip all
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if tag exists
+        id: tag_check
+        run: |
+          VERSION="${{ steps.cliff.outputs.version }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Git Tag
+        if: steps.tag_check.outputs.exists == 'false'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag -a "${{ steps.tag_check.outputs.tag }}" -m "Release ${{ steps.tag_check.outputs.version }}"
+          git push origin "${{ steps.tag_check.outputs.tag }}"
+
+      - name: Build artifacts
+        if: steps.tag_check.outputs.exists == 'false'
+        run: |
+          # Install dependencies and build package
+          uv sync
+
+          # Build wheel and sdist
+          uv build
+
+          echo "Built artifacts:"
+          ls -la dist/
+
+      - name: Create GitHub Release
+        if: steps.tag_check.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag_check.outputs.tag }}
+          name: Release ${{ steps.tag_check.outputs.version }}
+          body: |
+            # Release ${{ steps.tag_check.outputs.version }}
+
+            ${{ steps.cliff.outputs.content }}
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+          draft: false
+          prerelease: false
+
+      - name: Skip - Tag already exists
+        if: steps.tag_check.outputs.exists == 'true'
+        run: |
+          echo "::notice::Tag ${{ steps.tag_check.outputs.tag }} already exists. Skipping release creation."
