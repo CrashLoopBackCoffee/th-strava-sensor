@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.3](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v0.1.2..v0.1.3) - 2025-08-15
+
+### 🐛 Bug Fixes
+
+* fix: remove duplicate headers in GitHub release body by @tobiashenkel in [#51](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/51)
+
 ## [0.1.2](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v0.1.1..v0.1.2) - 2025-08-15
 
 ### 🐛 Bug Fixes
@@ -8,6 +14,7 @@
 
 ### 🔧 Other Changes
 
+* chore: prepare release v0.1.2 by @tobiashenkel in [#47](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/47)
 * fix: remove 'v' prefix from pyproject.toml version in changelog workflow by @tobiashenkel in [#49](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/49)
 
 ## [0.1.1](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v0.1.0..v0.1.1) - 2025-08-15
