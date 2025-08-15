@@ -42,6 +42,30 @@ uv run parse-activity --publish file:///path/to/activity.fit
 
 ## Configuration
 
+### Environment Setup
+
+The project uses direnv for automatic environment configuration. Set up your local environment:
+
+1. **Copy the environment template:**
+   ```bash
+   cp .env.local.example .env.local
+   ```
+
+2. **Configure credentials** in `.env.local` using one of these approaches:
+
+   **Option A: 1Password CLI Integration (Recommended)**
+   - Uncomment and configure the 1Password section
+   - Update vault/item references to match your 1Password setup
+   - Requires `op` CLI tool and appropriate vault access
+
+   **Option B: Direct Environment Variables**
+   - Uncomment and fill in the direct credential section
+   - Less secure but simpler for development
+
+3. **Configure MQTT broker URL** to match your setup
+
+The `.env.local` file is excluded from git for security. The direnv configuration will automatically source this file when entering the project directory.
+
 ### Environment Variables
 
 ```bash
