@@ -7,7 +7,30 @@ This document provides reference documentation for the Strava Sensor public APIs
 ### Basic Usage
 
 ```bash
-uv run parse-activity [OPTIONS] SOURCE_URI
+uv run strava-sensor [COMMAND] [OPTIONS]
+```
+
+### Commands
+
+#### parse-activity
+Parse a FIT file and extract device battery information.
+
+```bash
+uv run strava-sensor parse-activity [OPTIONS] SOURCE_URI
+```
+
+#### webhook-server
+Start webhook server to receive Strava events.
+
+```bash
+uv run strava-sensor webhook-server [OPTIONS]
+```
+
+#### webhook-subscription
+Manage Strava webhook subscriptions.
+
+```bash
+uv run strava-sensor webhook-subscription {create,list,delete,delete-all} [OPTIONS]
 ```
 
 ### Options
@@ -60,6 +83,11 @@ export GARMINTOKENS="/path/to/token/storage"
 #### Strava Integration
 ```bash
 export STRAVA_REFRESH_TOKEN="your_strava_refresh_token"
+
+# For webhook functionality
+export STRAVA_CLIENT_ID="your_strava_client_id"
+export STRAVA_CLIENT_SECRET="your_strava_client_secret"
+export STRAVA_WEBHOOK_VERIFY_TOKEN="your_webhook_verify_token"
 ```
 
 #### MQTT Publishing
@@ -72,7 +100,55 @@ export MQTT_PASSWORD="mqtt_password"
 export MQTT_BROKER_URL="mqtts://broker-hostname:8883"
 ```
 
-## Python API
+## Webhook Integration
+
+### Webhook Server
+
+Start a webhook server to automatically process new Strava activities:
+
+```bash
+# Start webhook server on port 8080
+uv run strava-sensor webhook-server --port 8080
+
+# Start with MQTT publishing enabled
+uv run strava-sensor webhook-server --port 8080 --publish
+```
+
+### Subscription Management
+
+```bash
+# Create a new webhook subscription
+uv run strava-sensor webhook-subscription create https://your-server.com/webhook
+
+# List existing subscriptions
+uv run strava-sensor webhook-subscription list
+
+# Delete a specific subscription
+uv run strava-sensor webhook-subscription delete 12345
+
+# Delete all subscriptions
+uv run strava-sensor webhook-subscription delete-all
+```
+
+### Webhook Events
+
+The webhook server automatically processes these Strava events:
+- Activity creation: Triggers FIT file processing and device data extraction
+- Activity updates: Currently ignored
+- Activity deletion: Currently ignored
+
+### Environment Variables for Webhooks
+
+```bash
+# Required for webhook functionality
+export STRAVA_CLIENT_ID="your_strava_client_id"
+export STRAVA_CLIENT_SECRET="your_strava_client_secret"
+export STRAVA_WEBHOOK_VERIFY_TOKEN="random_verification_token"
+
+# Optional: webhook server port (default: 8080)
+export WEBHOOK_PORT="8080"
+```
+
 
 ### Source Classes
 

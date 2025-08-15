@@ -34,6 +34,7 @@ build-backend = "hatchling.build"
 
 [project.scripts]
 parse-activity = "strava_sensor.cli:main"
+strava-sensor = "strava_sensor.cli:main"
 
 [tool.ruff]
 line-length = 100
