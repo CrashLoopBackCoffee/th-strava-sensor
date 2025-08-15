@@ -1,3 +1,12 @@
+# Changelog
+
+## [0.1.1](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v0.1.0..v0.1.1) - 2025-08-15
+
+### 🔧 Other Changes
+
+* fix: improve changelog formatting in git-cliff config by @tobiashenkel in [#46](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/46)
+* chore(deps): lock file maintenance by @tobiashenkel in [#22](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/22)
+* chore(deps): update actions/checkout action to v5 by @tobiashenkel in [#23](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/23)
 
 ## [0.1.0] - 2025-08-15
 
@@ -23,6 +32,7 @@
 
 ### 🔧 Other Changes
 
+* chore: prepare release 0.1.0 by @tobiashenkel in [#43](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/43)
 * chore: prepare release 0.1.0 by @tobiashenkel in [#41](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/41)
 * Remove surplus empty line from changelog by @tobiashenkel in [#42](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/42)
 * Use pat to create release by @tobiashenkel in [#39](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/39)
