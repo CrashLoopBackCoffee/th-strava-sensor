@@ -22,6 +22,7 @@ def setup_logging():
     daiquiri.setup(level=logging.DEBUG)
     daiquiri.set_default_log_levels(
         [
+            ('httpcore', 'INFO'),
             ('paho', 'INFO'),
             ('stravalib', 'INFO'),
             ('urllib3.connectionpool', 'INFO'),
@@ -44,7 +45,7 @@ def initialize_sources() -> list[BaseSource]:
 
     # Strava doesn't support downloading FIT files directly.
     # So we need to create it last and give it downstream sources.
-    strava_refresh_token = os.environ['STRAVA_REFRESH_TOKEN']
+    strava_refresh_token = os.environ.get('STRAVA_REFRESH_TOKEN')
     if strava_refresh_token:
         client = stravalib.Client(
             refresh_token=strava_refresh_token,
@@ -89,7 +90,14 @@ def main() -> None:
         mqtt_password = os.environ['MQTT_PASSWORD']
         mqtt_client = MQTTClient()
         mqtt_client.connect(mqtt_broker_url, mqtt_username, mqtt_password)
+
+        # Wait for connection with timeout to prevent infinite hangs
+        timeout = 30  # 30 seconds
+        start_time = time.time()
         while not mqtt_client.connected:
+            if time.time() - start_time > timeout:
+                _logger.error('MQTT connection timeout after %s seconds', timeout)
+                sys.exit(1)
             _logger.debug('Waiting for MQTT connection')
             time.sleep(0.1)
 
@@ -126,7 +134,12 @@ def main() -> None:
             _logger.info('---')
 
             if mqtt_client:
-                device_status.publish_on_mqtt(mqtt_client)
+                success = device_status.publish_on_mqtt(mqtt_client)
+                if not success:
+                    _logger.warning(
+                        'Failed to publish MQTT data for device %s',
+                        device_status.serial_number,
+                    )
 
         # If we are publishing to MQTT stay alive until interrupted
         if mqtt_client:

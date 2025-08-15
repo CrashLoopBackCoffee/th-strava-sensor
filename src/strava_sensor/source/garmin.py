@@ -14,6 +14,10 @@ from strava_sensor.source.base import BaseSource
 
 _logger = logging.getLogger(__name__)
 
+# Tolerance values for activity matching
+ACTIVITY_TIME_TOLERANCE_SECONDS = 60
+ACTIVITY_DISTANCE_TOLERANCE_METERS = 100
+
 
 class GarminSource(BaseSource):
     uri_scheme = 'garmin'
@@ -94,12 +98,12 @@ class GarminSource(BaseSource):
             activity_elapsed_time = activity['duration']
             activity_distance = activity['distance']
 
-            # Check if the activity matches elapsed time within 60 seconds
-            if abs(activity_elapsed_time - elapsed_time_in_s) > 60:
+            # Check if the activity matches elapsed time within tolerance
+            if abs(activity_elapsed_time - elapsed_time_in_s) > ACTIVITY_TIME_TOLERANCE_SECONDS:
                 continue
 
-            # Check if the activity matches distance within 100 meters
-            if abs(activity_distance - distance_in_m) > 100:
+            # Check if the activity matches distance within tolerance
+            if abs(activity_distance - distance_in_m) > ACTIVITY_DISTANCE_TOLERANCE_METERS:
                 continue
 
             _logger.debug(

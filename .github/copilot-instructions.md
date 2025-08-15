@@ -2,6 +2,12 @@
 
 Purpose: Help AI agents make fast, correct changes in this repo by understanding architecture, workflows, and conventions. Keep responses concrete, reflect current code, and prefer existing patterns over reinvention.
 
+### Direnv Usage
+This repository expects [direnv](https://direnv.net/) for environment management. Ensure `.envrc` is loaded and permitted (`direnv allow`) before running commands or scripts. Environment variables and Python virtualenv activation are typically managed via direnv. If you encounter missing environment variables or Python path issues, check your direnv status first.
+
+### Environment Variable Inspection
+When inspecting environment variables in the shell (e.g., with `grep`), use precise patterns to avoid exposing secrets. For example, prefer `env | grep '^STRAVA_'` or `env | grep '^WEBHOOK_'` over broad patterns. Do not use generic `grep` that could match sensitive keys or secrets.
+
 ### 1. Core Mission
 Parse cycling/running activity FIT files (from file system, Garmin Connect, or via Strava indirection), extract device battery telemetry, optionally publish device statuses and Home Assistant MQTT discovery payloads.
 
@@ -48,7 +54,7 @@ Then run dependency sync or checks (e.g., `uv sync`, pre-commit hooks). This avo
 Edit `MODEL_OVERRIDE` in `fitfile/model.py`: nested dict keyed by lowercase manufacturer -> product code -> friendly name. Keep keys as strings. Do not alter validator logic.
 
 ### 7. Tests & Quality
-- Always run `uv run ./scripts/run-all-checks.sh` before committing (aggregates pre-commit hooks + tests). Re-run if it auto-fixes.
+- **Linting & Checks**: Always run `uv run ./scripts/run-all-checks.sh` before committing (aggregates pre-commit hooks + tests). Re-run if it auto-fixes.
 - Let pre-commit auto-fix first; only hand-edit style issues if still failing after a second run.
 - Full suite: `uv run pre-commit run --all-files --show-diff-on-failure`. Direct tests: `uv run pytest -v`.
 - Keep FIT fixtures minimal in `tests/fixtures/`.
