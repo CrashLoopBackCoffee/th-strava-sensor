@@ -13,12 +13,17 @@
 * Support garmin connect by @tobiashenkel in [#10](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/10)
 * Add mqtt publishing by @tobiashenkel in [#6](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/6)
 
+### 🐛 Bug Fixes
+
+* fix: use --bump instead of --latest in release workflow by @tobiashenkel in [#44](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/44)
+
 ### 📖 Documentation
 
 * Analyze and document project structure with comprehensive documentation by @tobiashenkel in [#16](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/16)
 
 ### 🔧 Other Changes
 
+* chore: prepare release 0.1.0 by @tobiashenkel in [#41](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/41)
 * Remove surplus empty line from changelog by @tobiashenkel in [#42](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/42)
 * Use pat to create release by @tobiashenkel in [#39](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/39)
 * Linters should run on pull requests by @tobiashenkel in [#38](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/38)
