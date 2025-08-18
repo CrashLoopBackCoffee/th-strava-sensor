@@ -6,8 +6,15 @@
 
 * Add strava webhook support by @tobiashenkel in [#24](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/24)
 
+### 🐛 Bug Fixes
+
+* fix: update release workflow to use proper semantic versioning by @tobiashenkel in [#62](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/62)
+
 ### 🔧 Other Changes
 
+* chore(deps): lock file maintenance by @tobiashenkel in [#56](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/56)
+* chore(deps): update kenji-miyake/setup-git-cliff action to v2 by @tobiashenkel in [#60](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/60)
+* chore: prepare release v1.0.0 by @tobiashenkel in [#55](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/55)
 * fix: use setup-git-cliff for proper git-cliff installation by @tobiashenkel in [#59](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/59)
 * fix: install git-cliff before running bump detection script by @tobiashenkel in [#58](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/58)
 * feat: add semantic version bump detection script by @tobiashenkel in [#57](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/57)
