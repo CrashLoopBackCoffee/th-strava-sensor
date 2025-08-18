@@ -33,12 +33,7 @@ jobs:
           git config --local user.name "GitHub Action"
 
       - name: Install git-cliff
-        uses: orhun/git-cliff-action@v4
-        with:
-          config: cliff.toml
-          args: --version
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
+        uses: kenji-miyake/setup-git-cliff@v1
 
       - name: Determine version bump type
         id: bump_type
