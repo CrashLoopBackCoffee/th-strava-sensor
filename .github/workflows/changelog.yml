@@ -32,12 +32,19 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
+      - name: Determine version bump type
+        id: bump_type
+        run: |
+          BUMP_TYPE=$(./scripts/determine-bump-type.sh)
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+          echo "Determined bump type: $BUMP_TYPE"
+
       - name: Generate changelog and bump version
         id: changelog
         uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
-          args: --bump
+          args: --bump ${{ steps.bump_type.outputs.bump_type }}
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
           OUTPUT: CHANGELOG.md
