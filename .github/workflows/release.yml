@@ -30,12 +30,22 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
+      - name: Install git-cliff
+        uses: kenji-miyake/setup-git-cliff@v1
+
+      - name: Determine version bump type
+        id: bump_type
+        run: |
+          BUMP_TYPE=$(./scripts/determine-bump-type.sh)
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+          echo "Determined bump type: $BUMP_TYPE"
+
       - name: Get version and generate release notes
         id: cliff
         uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
-          args: --bump --unreleased --strip header
+          args: --bump ${{ steps.bump_type.outputs.bump_type }} --unreleased --strip header
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
