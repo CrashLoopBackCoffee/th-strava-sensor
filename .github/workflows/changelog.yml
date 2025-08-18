@@ -33,7 +33,7 @@ jobs:
           git config --local user.name "GitHub Action"
 
       - name: Install git-cliff
-        uses: kenji-miyake/setup-git-cliff@v1
+        uses: kenji-miyake/setup-git-cliff@v2
 
       - name: Determine version bump type
         id: bump_type
