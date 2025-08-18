@@ -48,11 +48,12 @@ main() {
 
     # Determine bump type based on header content
     # Priority: Breaking > Enhancement > Everything else (patch)
+    # Match on text content without relying on emojis for robustness
 
-    if echo "$headers" | grep -q "🚨 Breaking Changes"; then
+    if echo "$headers" | grep -q "Breaking Changes"; then
         log "Found breaking changes - bumping major version"
         echo "major"
-    elif echo "$headers" | grep -q "✨ Enhancements"; then
+    elif echo "$headers" | grep -q "Enhancements"; then
         log "Found enhancements - bumping minor version"
         echo "minor"
     else
