@@ -183,3 +183,5 @@ uv run strava-webhook-listener
 ```
 
 This architecture enables flexible, extensible activity processing with robust error handling and Home Assistant integration.
+
+- always run `uv run ./scripts/run-all-checks.sh` after you made changes
