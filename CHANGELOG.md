@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.1](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v1.1.0..v1.1.1) - 2025-08-19
+
+### 🐛 Bug Fixes
+
+* fix: convert Docker repository name to lowercase by @tobiashenkel in [#73](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/73)
+
 ## [1.1.0](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v1.0.0..v1.1.0) - 2025-08-19
 
 ### ✨ Enhancements
@@ -13,6 +19,7 @@
 
 ### 🔧 Other Changes
 
+* chore: prepare release v1.1.0 by @tobiashenkel in [#64](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/64)
 * chore(deps): update docker/build-push-action action to v6 by @tobiashenkel in [#69](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/69)
 * chore(deps): update ghcr.io/astral-sh/uv docker tag to v0.8.12 by @tobiashenkel in [#68](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/68)
 * Fix pre-commit validation by @tobiashenkel in [#66](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/66)
