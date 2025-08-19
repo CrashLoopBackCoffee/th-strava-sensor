@@ -15,30 +15,37 @@ repos:
     hooks:
       - id: pyright
         name: pyright
-        entry: ./.venv/bin/pyright --warnings
+        entry: uv run pyright --warnings
         language: system
         types: [python]
+        pass_filenames: false
+
       - id: ruff-format
         name: ruff-format
-        entry: ./.venv/bin/ruff format
+        entry: uv run ruff format
         language: system
         types: [python]
+        pass_filenames: false
+
       - id: ruff-check
         name: ruff-check
-        entry: ./.venv/bin/ruff check --fix
+        entry: uv run ruff check --fix
         language: system
         types: [python]
+        pass_filenames: false
+
       - id: yamllint
         name: yamllint
-        entry: ./.venv/bin/yamllint --strict -c=.yamllint
+        entry: uv run yamllint --strict -c=.yamllint .
         language: system
         types: [yaml]
+        pass_filenames: false
 
       # Pre-push hooks, whichy take too long during pre-commit
       - id: pytest
         stages: [pre-push]
         name: pytest
-        entry: ./.venv/bin/pytest tests --cov --cov-report=term-missing --cov-report=xml:coverage.xml
+        entry: uv run pytest tests --cov --cov-report=term-missing --cov-report=xml:coverage.xml
         language: system
         types: [python]
         pass_filenames: false
