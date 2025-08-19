@@ -28,20 +28,16 @@ async def _register_webhook():
     """Register the Strava webhook subscription on startup."""
 
     _logger.info('Wait to register Strava webhook subscription')
-    # Wait for 10 seconds to give the server time to start
+    # Wait for 2 seconds to give the server time to start
     await asyncio.sleep(2)
 
     # Ensure subscription AFTER server is listening to avoid Strava verification race.
     _logger.info('Registering Strava webhook subscription')
-    try:
-        # Call async variant directly (avoid sync wrapper which uses asyncio.run())
-        sub_id = await manager_singleton.ensure_subscription()
-        if manager_singleton.verify_token and not os.environ.get('STRAVA_VERIFY_TOKEN'):
-            _logger.info('Using generated STRAVA_VERIFY_TOKEN=%s', manager_singleton.verify_token)
-        _logger.info('Active Strava subscription id=%s', sub_id)
-    except Exception as e:  # fail hard so container/platform restarts
-        _logger.error('Startup failed ensuring Strava subscription: %s', e)
-        raise
+    # Call async variant directly (avoid sync wrapper which uses asyncio.run())
+    sub_id = await manager_singleton.ensure_subscription()
+    if manager_singleton.verify_token and not os.environ.get('STRAVA_VERIFY_TOKEN'):
+        _logger.info('Using generated STRAVA_VERIFY_TOKEN=%s', manager_singleton.verify_token)
+    _logger.info('Active Strava subscription id=%s', sub_id)
 
 
 async def _delete_webhook():
@@ -60,7 +56,17 @@ _state = _State()
 async def lifespan(app: fastapi.FastAPI):
     """Lifespan event to ensure subscription + persistent MQTT on startup and cleanup on shutdown."""
 
-    asyncio.create_task(_register_webhook())
+    # Validate required environment variables upfront
+    required_env_vars = ['STRAVA_CLIENT_ID', 'STRAVA_CLIENT_SECRET', 'STRAVA_WEBHOOK_URL']
+    missing_vars = [var for var in required_env_vars if not os.environ.get(var)]
+    if missing_vars:
+        error_msg = f'Missing required environment variables: {", ".join(missing_vars)}'
+        _logger.error(error_msg)
+        raise RuntimeError(error_msg)
+
+    # Register webhook and wait for completion to handle errors properly
+    await _register_webhook()
+
     # Initialize persistent MQTT client if env vars provided
     # persistent MQTT client lives on _state
     if (
