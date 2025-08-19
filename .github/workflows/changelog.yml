@@ -52,6 +52,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
           OUTPUT: CHANGELOG.md
 
+      - name: Set up Python and uv
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
       - name: Update pyproject.toml version
         run: |
           # Update pyproject.toml with the new version from git-cliff
@@ -60,6 +68,12 @@ jobs:
           NEW_VERSION="${RAW_VERSION#v}"
           sed -i "s/^version = .*/version = \"$NEW_VERSION\"/" pyproject.toml
           echo "Updated version to $NEW_VERSION (from $RAW_VERSION)"
+
+      - name: Update uv.lock with new version
+        run: |
+          # Sync lock file to update project version
+          uv sync
+          echo "Updated uv.lock with new project version"
 
       - name: Check for changes
         id: changes
