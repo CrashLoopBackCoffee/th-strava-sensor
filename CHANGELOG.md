@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.1.0](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v1.0.0..v1.1.0) - 2025-08-19
+
+### ✨ Enhancements
+
+* feat: add Docker containerization with multi-stage build and CI/CD by @tobiashenkel in [#67](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/67)
+
+### 🐛 Bug Fixes
+
+* fix: sync uv.lock with version bump in changelog workflow by @tobiashenkel in [#71](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/71)
+* Improve webhook server error handling and documentation by @tobiashenkel in [#70](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/70)
+
+### 🔧 Other Changes
+
+* chore(deps): update docker/build-push-action action to v6 by @tobiashenkel in [#69](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/69)
+* chore(deps): update ghcr.io/astral-sh/uv docker tag to v0.8.12 by @tobiashenkel in [#68](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/68)
+* Fix pre-commit validation by @tobiashenkel in [#66](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/66)
+* fix: make bump detection more robust by removing emoji dependency by @tobiashenkel in [#65](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/65)
+* chore(deps): update kenji-miyake/setup-git-cliff action to v2 by @tobiashenkel in [#63](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/63)
+
 ## [1.0.0](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v0.1.4..v1.0.0) - 2025-08-18
 
 ### 🚨 Breaking Changes
@@ -12,6 +31,7 @@
 
 ### 🔧 Other Changes
 
+* chore: prepare release v1.0.0 by @tobiashenkel in [#61](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/61)
 * chore(deps): lock file maintenance by @tobiashenkel in [#56](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/56)
 * chore(deps): update kenji-miyake/setup-git-cliff action to v2 by @tobiashenkel in [#60](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/60)
 * chore: prepare release v1.0.0 by @tobiashenkel in [#55](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/55)
