@@ -674,13 +674,14 @@ wheels = [
 
 [[package]]
 name = "strava-sensor"
-version = "0.1.4"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "daiquiri" },
     { name = "fastapi" },
     { name = "garmin-fit-sdk" },
     { name = "garminconnect" },
+    { name = "httpx" },
     { name = "paho-mqtt" },
     { name = "pydantic" },
     { name = "requests" },
@@ -692,7 +693,6 @@ dependencies = [
 dev = [
     { name = "distlib" },
     { name = "filelock" },
-    { name = "httpx" },
     { name = "platformdirs" },
     { name = "pre-commit" },
     { name = "pre-commit-uv" },
@@ -710,6 +710,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "garmin-fit-sdk", specifier = ">=21.171.0" },
     { name = "garminconnect", specifier = ">=0.2.26" },
+    { name = "httpx", specifier = ">=0.27.2" },
     { name = "paho-mqtt", specifier = ">=2.1.0" },
     { name = "pydantic", specifier = ">=2.11.4" },
     { name = "requests", specifier = ">=2.32.3" },
@@ -721,7 +722,6 @@ requires-dist = [
 dev = [
     { name = "distlib", specifier = ">=0.3.9" },
     { name = "filelock", specifier = ">=3.18.0" },
-    { name = "httpx", specifier = ">=0.27.2" },
     { name = "platformdirs", specifier = ">=4.3.7" },
     { name = "pre-commit", specifier = ">=4.2.0" },
     { name = "pre-commit-uv", specifier = ">=4.1.4" },

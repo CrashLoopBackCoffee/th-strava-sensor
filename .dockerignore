@@ -1,0 +1,78 @@
+# Git and version control
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv
+venv/
+ENV/
+env/
+.env
+
+# Testing
+.pytest_cache/
+.coverage
+coverage.xml
+*.cover
+.hypothesis/
+.tox/
+
+# Development tools
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Documentation
+docs/
+API.md
+ARCHITECTURE.md
+CHANGELOG.md
+CLAUDE.md
+CONTRIBUTING.md
+
+# Configuration files not needed in container
+renovate.json5
+cliff.toml
+.pre-commit-config.yaml
+
+# GitHub workflows and actions (not needed in container)
+.github/
+
+# Scripts not needed in container
+scripts/
+
+# Test files
+tests/
+
+# Logs
+*.log
+localtunnel.log
+
+# OS
+.DS_Store
+Thumbs.db
