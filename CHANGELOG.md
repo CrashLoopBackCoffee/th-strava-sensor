@@ -6,6 +6,10 @@
 
 * fix: convert Docker repository name to lowercase in release workflow by @tobiashenkel in [#75](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/75)
 
+### 🔧 Other Changes
+
+* chore: prepare release v1.1.2 by @tobiashenkel in [#74](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/74)
+
 ## [1.1.1](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v1.1.0..v1.1.1) - 2025-08-19
 
 ### 🐛 Bug Fixes
