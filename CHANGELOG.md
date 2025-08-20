@@ -1,10 +1,20 @@
 # Changelog
 
+## [1.1.2](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v1.1.1..v1.1.2) - 2025-08-20
+
+### 🐛 Bug Fixes
+
+* fix: convert Docker repository name to lowercase in release workflow by @tobiashenkel in [#75](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/75)
+
 ## [1.1.1](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v1.1.0..v1.1.1) - 2025-08-19
 
 ### 🐛 Bug Fixes
 
 * fix: convert Docker repository name to lowercase by @tobiashenkel in [#73](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/73)
+
+### 🔧 Other Changes
+
+* chore: prepare release v1.1.1 by @tobiashenkel in [#72](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/72)
 
 ## [1.1.0](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v1.0.0..v1.1.0) - 2025-08-19
 
