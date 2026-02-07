@@ -321,11 +321,10 @@ async def _process_activity_async(activity_id: int) -> None:
         _logger.info('Reading activity %s from Strava', activity_url)
 
         # Run the synchronous operations in a thread pool to avoid blocking the event loop
-        loop = asyncio.get_event_loop()
-        fit_bytes = await loop.run_in_executor(None, strava_source.read_activity, activity_url)
+        fit_bytes = await asyncio.to_thread(strava_source.read_activity, activity_url)
         _logger.debug('Read %d bytes from Strava activity %s', len(fit_bytes), activity_id)
 
-        fitfile = await loop.run_in_executor(None, FitFile, fit_bytes)
+        fitfile = await asyncio.to_thread(FitFile, fit_bytes)
         _logger.debug('Parsed FIT file for activity %s', activity_id)
 
         devices_status = fitfile.get_devices_status()
