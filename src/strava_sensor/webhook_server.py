@@ -27,9 +27,33 @@ from strava_sensor.ui.status_page import register_status_page
 _logger = logging.getLogger(__name__)
 
 
+def _get_registration_delay_seconds() -> float:
+    raw_delay = os.environ.get('STRAVA_WEBHOOK_REGISTRATION_DELAY', '0')
+    try:
+        delay_seconds = float(raw_delay)
+    except ValueError:
+        _logger.warning(
+            'Invalid STRAVA_WEBHOOK_REGISTRATION_DELAY=%s; defaulting to 0 seconds',
+            raw_delay,
+        )
+        return 0.0
+    if delay_seconds < 0:
+        _logger.warning(
+            'Negative STRAVA_WEBHOOK_REGISTRATION_DELAY=%s; defaulting to 0 seconds',
+            raw_delay,
+        )
+        return 0.0
+    return delay_seconds
+
+
 async def _register_webhook():
     """Register the Strava webhook subscription on startup."""
     try:
+        delay_seconds = _get_registration_delay_seconds()
+        if delay_seconds > 0:
+            _logger.info('Delaying Strava webhook registration by %.1f seconds', delay_seconds)
+            await asyncio.sleep(delay_seconds)
+
         _logger.info('Registering Strava webhook subscription')
         # Call async variant directly (avoid sync wrapper which uses asyncio.run())
         sub_id = await manager_singleton.ensure_subscription()

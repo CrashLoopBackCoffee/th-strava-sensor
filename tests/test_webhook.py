@@ -229,3 +229,49 @@ async def test_lifespan_does_not_block_on_webhook_registration(strava_webhook_en
 
     await asyncio.wait_for(_run_lifespan_once(), timeout=0.5)
     assert cancelled.is_set()
+
+
+@pytest.mark.asyncio
+async def test_register_webhook_applies_configured_delay(monkeypatch):
+    monkeypatch.setenv('STRAVA_WEBHOOK_REGISTRATION_DELAY', '2.5')
+    events = []
+
+    async def fake_sleep(seconds):
+        events.append(f'sleep:{seconds}')
+
+    async def fake_ensure_subscription():
+        events.append('ensure')
+        return 123
+
+    monkeypatch.setattr(webhook_server.asyncio, 'sleep', fake_sleep)
+    monkeypatch.setattr(
+        webhook_server.manager_singleton, 'ensure_subscription', fake_ensure_subscription
+    )
+
+    await webhook_server._register_webhook()
+    assert events == ['sleep:2.5', 'ensure']
+
+
+@pytest.mark.asyncio
+async def test_register_webhook_invalid_delay_defaults_to_zero(monkeypatch):
+    monkeypatch.setenv('STRAVA_WEBHOOK_REGISTRATION_DELAY', 'not-a-number')
+    sleep_called = False
+    ensure_called = False
+
+    async def fake_sleep(_seconds):
+        nonlocal sleep_called
+        sleep_called = True
+
+    async def fake_ensure_subscription():
+        nonlocal ensure_called
+        ensure_called = True
+        return 456
+
+    monkeypatch.setattr(webhook_server.asyncio, 'sleep', fake_sleep)
+    monkeypatch.setattr(
+        webhook_server.manager_singleton, 'ensure_subscription', fake_ensure_subscription
+    )
+
+    await webhook_server._register_webhook()
+    assert ensure_called
+    assert not sleep_called
