@@ -43,7 +43,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: Generate changelog with auto
         run: npx -y auto@${{ env.AUTO_VERSION }} changelog --no-git-commit --title "Changelog"
