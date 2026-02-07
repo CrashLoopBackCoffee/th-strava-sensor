@@ -66,21 +66,50 @@ jobs:
         run: |
           VERSION="${{ steps.tag_check.outputs.version }}"
 
-          awk -v version="$VERSION" '
-            ($0 ~ "^# v?" version "([[:space:]]|\\(|$)" ||
-             $0 ~ "^## \\[?v?" version "(\\]|[[:space:]]|$|-)") { in_section=1; next }
-            in_section && (
-              $0 ~ "^# v?[0-9]+\\.[0-9]+\\.[0-9]+" ||
-              $0 ~ "^## \\[?v?[0-9]+\\.[0-9]+\\.[0-9]+" ||
-              $0 ~ "^# Changelog$"
-            ) { exit }
-            in_section { print }
-          ' CHANGELOG.md > release-notes.md
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
 
-          if ! grep -q '[^[:space:]]' release-notes.md; then
-            echo "Failed to extract release notes for version $VERSION from CHANGELOG.md"
-            exit 1
-          fi
+          version = os.environ['VERSION']
+          escaped = re.escape(version)
+
+          start_patterns = [
+              re.compile(rf'^#\s+v?{escaped}(?:\s|\(|$)'),
+              re.compile(rf'^##\s+\[?v?{escaped}(?:\]|[\s-]|$)'),
+          ]
+          stop_patterns = [
+              re.compile(r'^#\s+v?[0-9]+\.[0-9]+\.[0-9]+'),
+              re.compile(r'^##\s+\[?v?[0-9]+\.[0-9]+\.[0-9]+'),
+              re.compile(r'^#\s+Changelog\s*$'),
+          ]
+
+          lines = Path('CHANGELOG.md').read_text(encoding='utf-8').splitlines(keepends=True)
+          start_idx: int | None = None
+
+          for idx, line in enumerate(lines):
+              if any(pattern.match(line) for pattern in start_patterns):
+                  start_idx = idx + 1
+                  break
+
+          if start_idx is None:
+              raise SystemExit(f'Failed to find changelog section header for version {version}')
+
+          selected: list[str] = []
+          for line in lines[start_idx:]:
+              if any(pattern.match(line) for pattern in stop_patterns):
+                  break
+              selected.append(line)
+
+          body = ''.join(selected).strip()
+          if not body:
+              raise SystemExit(
+                  f'Failed to extract release notes for version {version} from CHANGELOG.md'
+              )
+
+          Path('release-notes.md').write_text(body + '\n', encoding='utf-8')
+          print(f'Extracted release notes for version {version}')
+          PY
 
       - name: Create Git Tag
         if: steps.tag_check.outputs.exists == 'false'
