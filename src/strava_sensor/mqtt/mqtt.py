@@ -12,7 +12,8 @@ _logger = logging.getLogger(__name__)
 
 
 class MQTTClient:
-    def __init__(self):
+    def __init__(self, on_connect_callback: t.Callable[['MQTTClient'], None] | None = None):
+        self._on_connect_callback = on_connect_callback
         self.client = paho.mqtt.client.Client(paho.mqtt.enums.CallbackAPIVersion.VERSION2)
 
         # Enable automatic reconnection with exponential backoff
@@ -84,6 +85,11 @@ class MQTTClient:
         properties: paho.mqtt.properties.Properties | None = None,
     ):
         _logger.info('Connected with result code %s', reason_code)
+        if self._on_connect_callback and self.connected:
+            try:
+                self._on_connect_callback(self)
+            except Exception:
+                _logger.exception('MQTT on-connect callback failed')
 
     def _on_disconnect(
         self,

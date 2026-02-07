@@ -18,6 +18,8 @@ import uvicorn
 
 from strava_sensor.cli import initialize_sources, setup_logging
 from strava_sensor.fitfile.fitfile import CorruptedFitFileError, FitFile, NotAFitFileError
+from strava_sensor.fitfile.model import DeviceStatus
+from strava_sensor.last_activity_store import LastActivityStore
 from strava_sensor.mqtt.mqtt import MQTTClient
 from strava_sensor.runtime_state import runtime_state
 from strava_sensor.source.strava import StravaSource
@@ -26,6 +28,7 @@ from strava_sensor.ui.status_page import register_status_page
 
 _logger = logging.getLogger(__name__)
 _MQTT_ENV_VARS = ('MQTT_BROKER_URL', 'MQTT_USERNAME', 'MQTT_PASSWORD')
+_last_activity_store = LastActivityStore.from_environment()
 
 
 def _get_registration_delay_seconds() -> float:
@@ -87,6 +90,45 @@ def _mqtt_env_is_configured() -> bool:
     return all(os.environ.get(name) for name in _MQTT_ENV_VARS)
 
 
+def _persist_last_activity_metadata(activity_id: int, devices_status: list[DeviceStatus]) -> None:
+    _last_activity_store.save(activity_id, devices_status)
+
+
+def _republish_last_activity_metadata(mqtt_client: MQTTClient) -> None:
+    last_activity = _last_activity_store.load()
+    if not last_activity:
+        _logger.debug('No persisted activity metadata found to republish')
+        return
+    if not last_activity.devices:
+        _logger.info(
+            'Persisted activity metadata for activity %s has no devices to republish',
+            last_activity.activity_id,
+        )
+        return
+
+    _logger.info(
+        'Republishing %s persisted device statuses from activity %s',
+        len(last_activity.devices),
+        last_activity.activity_id,
+    )
+    for device_status in last_activity.devices:
+        success = device_status.publish_on_mqtt(mqtt_client)
+        runtime_state.record_mqtt_publish(str(device_status.serial_number), success)
+        if not success:
+            _logger.warning(
+                'Failed to republish persisted MQTT data for device %s',
+                device_status.serial_number,
+            )
+
+
+def _on_mqtt_connect(mqtt_client: MQTTClient) -> None:
+    runtime_state.set_mqtt_connected(True)
+    try:
+        _republish_last_activity_metadata(mqtt_client)
+    except Exception:
+        _logger.exception('Failed to republish persisted activity metadata on MQTT connect')
+
+
 async def _disconnect_mqtt_client() -> dict[str, Any]:
     async with _mqtt_client_lock:
         if not _state.mqtt_client:
@@ -131,7 +173,7 @@ async def _reconnect_mqtt_client() -> dict[str, Any]:
             _logger.warning(message)
             return {'ok': False, 'connected': None, 'message': message}
 
-        mqtt_client = MQTTClient()
+        mqtt_client = MQTTClient(on_connect_callback=_on_mqtt_connect)
         try:
             mqtt_client.connect(
                 os.environ['MQTT_BROKER_URL'],
@@ -287,6 +329,7 @@ async def _process_activity_async(activity_id: int) -> None:
         _logger.debug('Parsed FIT file for activity %s', activity_id)
 
         devices_status = fitfile.get_devices_status()
+        _persist_last_activity_metadata(activity_id, devices_status)
 
         # Reuse persistent MQTT client if available
         if _state.mqtt_client:
