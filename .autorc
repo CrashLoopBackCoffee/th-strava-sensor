@@ -1,0 +1,46 @@
+{
+  "baseBranch": "main",
+  "owner": "CrashLoopBackCoffee",
+  "repo": "th-strava-sensor",
+  "plugins": ["git-tag"],
+  "noDefaultLabels": true,
+  "labels": [
+    {
+      "name": "breaking",
+      "releaseType": "major",
+      "changelogTitle": "🚨 Breaking Changes",
+      "description": "Increment the major version when merged"
+    },
+    {
+      "name": "security",
+      "releaseType": "patch",
+      "changelogTitle": "🔒 Security",
+      "description": "Increment the patch version when security changes are merged"
+    },
+    {
+      "name": "enhancement",
+      "releaseType": "minor",
+      "changelogTitle": "✨ Enhancements",
+      "description": "Increment the minor version when new features are merged"
+    },
+    {
+      "name": "bug",
+      "releaseType": "patch",
+      "changelogTitle": "🐛 Bug Fixes",
+      "description": "Increment the patch version when bug fixes are merged"
+    },
+    {
+      "name": "documentation",
+      "releaseType": "patch",
+      "changelogTitle": "📖 Documentation",
+      "description": "Increment the patch version when documentation updates are merged"
+    },
+    {
+      "name": "other",
+      "releaseType": "patch",
+      "default": true,
+      "changelogTitle": "🔧 Other Changes",
+      "description": "Increment the patch version for uncategorized changes"
+    }
+  ]
+}
