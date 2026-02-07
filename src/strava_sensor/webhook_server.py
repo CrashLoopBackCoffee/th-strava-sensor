@@ -375,7 +375,7 @@ def main() -> None:  # entry point
     port = int(os.environ.get('WEBHOOK_PORT', '8000'))
     _logger.info('Starting webhook server on http://localhost:%s', port)
     # Prefer websockets-sansio to avoid deprecated legacy protocol imports.
-    uvicorn.run(app, host='0.0.0.0', port=port, ws='websockets-sansio')
+    uvicorn.run(app, host='0.0.0.0', port=port, ws='websockets-sansio', log_config=None)
 
 
 register_status_page(
