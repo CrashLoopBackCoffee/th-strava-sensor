@@ -90,7 +90,8 @@ class GarminSource(BaseSource):
 
         garmin = self._get_client()
         activities = garmin.get_activities_by_date(
-            startdate=date, enddate=date + datetime.timedelta(days=1)
+            startdate=date.isoformat(),
+            enddate=(date + datetime.timedelta(days=1)).isoformat(),
         )
 
         for activity in activities:
