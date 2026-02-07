@@ -98,7 +98,7 @@ To use Strava integration, you need to set up API access:
 4. (Optional) For automatic processing via webhooks: expose a public HTTPS endpoint (during development use a tunneling tool like localtunnel). Set STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET and STRAVA_WEBHOOK_URL. STRAVA_VERIFY_TOKEN is optional; if omitted a random one is generated and logged. If your runtime takes time to become reachable (for example in Kubernetes), set STRAVA_WEBHOOK_REGISTRATION_DELAY to delay subscription creation. Start the listener with:
 
 ```bash
-uv run strava-webhook-listener
+uv run strava-sensor
 ```
 
 To create a temporary public URL with localtunnel:
@@ -109,7 +109,7 @@ lt --port 8000 --subdomain mystravawebhook
 
 # In another terminal:
 export STRAVA_WEBHOOK_URL="https://mystravawebhook.loca.lt/strava/webhook"
-uv run strava-webhook-listener
+uv run strava-sensor
 ```
 
 Alternatively use the helper script (simplified; just starts the tunnel) then export the URL manually:
@@ -118,7 +118,7 @@ Alternatively use the helper script (simplified; just starts the tunnel) then ex
 scripts/run-localtunnel.sh mystravawebhook
 # When it prints: your url is: https://mystravawebhook.loca.lt
 export STRAVA_WEBHOOK_URL="https://mystravawebhook.loca.lt/strava/webhook"
-uv run strava-webhook-listener
+uv run strava-sensor
 ```
 
 The listener will:

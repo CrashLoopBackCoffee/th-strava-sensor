@@ -33,4 +33,4 @@ USER appuser
 
 ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
-CMD ["strava-webhook-listener"]
+CMD ["strava-sensor"]
