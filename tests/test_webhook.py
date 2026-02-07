@@ -166,6 +166,26 @@ def test_healthz_endpoint(webhook_client):
     assert 'subscription_id' in j
 
 
+def test_mqtt_disconnect_endpoint(webhook_client, monkeypatch):
+    async def fake_disconnect():
+        return {'ok': True, 'connected': False, 'message': 'MQTT client disconnected'}
+
+    monkeypatch.setattr(webhook_server, '_disconnect_mqtt_client', fake_disconnect)
+    r = webhook_client.post('/api/mqtt/disconnect')
+    assert r.status_code == 200
+    assert r.json() == {'ok': True, 'connected': False, 'message': 'MQTT client disconnected'}
+
+
+def test_mqtt_reconnect_endpoint(webhook_client, monkeypatch):
+    async def fake_reconnect():
+        return {'ok': False, 'connected': False, 'message': 'Failed to connect MQTT client'}
+
+    monkeypatch.setattr(webhook_server, '_reconnect_mqtt_client', fake_reconnect)
+    r = webhook_client.post('/api/mqtt/reconnect')
+    assert r.status_code == 200
+    assert r.json() == {'ok': False, 'connected': False, 'message': 'Failed to connect MQTT client'}
+
+
 @pytest.mark.asyncio
 async def test_retry_list_then_success(strava_webhook_env, monkeypatch):
     monkeypatch.setenv('STRAVA_SUBSCRIPTION_RETRIES', '3')

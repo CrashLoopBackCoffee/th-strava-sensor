@@ -25,6 +25,7 @@ from strava_sensor.strava.webhook import manager_singleton
 from strava_sensor.ui.status_page import register_status_page
 
 _logger = logging.getLogger(__name__)
+_MQTT_ENV_VARS = ('MQTT_BROKER_URL', 'MQTT_USERNAME', 'MQTT_PASSWORD')
 
 
 def _get_registration_delay_seconds() -> float:
@@ -79,6 +80,89 @@ class _State:
 
 
 _state = _State()
+_mqtt_client_lock = asyncio.Lock()
+
+
+def _mqtt_env_is_configured() -> bool:
+    return all(os.environ.get(name) for name in _MQTT_ENV_VARS)
+
+
+async def _disconnect_mqtt_client() -> dict[str, Any]:
+    async with _mqtt_client_lock:
+        if not _state.mqtt_client:
+            runtime_state.set_mqtt_connected(False)
+            return {
+                'ok': True,
+                'connected': False,
+                'message': 'MQTT client already disconnected',
+            }
+
+        mqtt_client = _state.mqtt_client
+        _state.mqtt_client = None
+        try:
+            mqtt_client.disconnect()
+        except Exception as exc:
+            _logger.exception('Error disconnecting MQTT client')
+            runtime_state.set_mqtt_connected(False)
+            return {
+                'ok': False,
+                'connected': False,
+                'message': f'Failed to disconnect MQTT client: {exc}',
+            }
+
+        runtime_state.set_mqtt_connected(False)
+        _logger.info('Persistent MQTT client disconnected')
+        return {'ok': True, 'connected': False, 'message': 'MQTT client disconnected'}
+
+
+async def _reconnect_mqtt_client() -> dict[str, Any]:
+    async with _mqtt_client_lock:
+        if _state.mqtt_client:
+            try:
+                _state.mqtt_client.disconnect()
+            except Exception:
+                _logger.exception('Error disconnecting existing MQTT client before reconnect')
+            finally:
+                _state.mqtt_client = None
+
+        if not _mqtt_env_is_configured():
+            runtime_state.set_mqtt_connected(None)
+            message = 'MQTT environment variables not fully set; cannot reconnect'
+            _logger.warning(message)
+            return {'ok': False, 'connected': None, 'message': message}
+
+        mqtt_client = MQTTClient()
+        try:
+            mqtt_client.connect(
+                os.environ['MQTT_BROKER_URL'],
+                os.environ['MQTT_USERNAME'],
+                os.environ['MQTT_PASSWORD'],
+            )
+        except Exception as exc:
+            runtime_state.set_mqtt_connected(False)
+            _logger.exception('Failed to start persistent MQTT client')
+            return {
+                'ok': False,
+                'connected': False,
+                'message': f'Failed to connect MQTT client: {exc}',
+            }
+
+        _state.mqtt_client = mqtt_client
+        start = time.time()
+        while not mqtt_client.connected and time.time() - start < 5:
+            await asyncio.sleep(0.1)
+
+        runtime_state.set_mqtt_connected(mqtt_client.connected)
+        if mqtt_client.connected:
+            _logger.info('Persistent MQTT client started')
+            return {'ok': True, 'connected': True, 'message': 'MQTT client connected'}
+
+        _logger.warning('Persistent MQTT client not connected after timeout')
+        return {
+            'ok': True,
+            'connected': False,
+            'message': 'MQTT reconnect initiated; waiting for broker connection',
+        }
 
 
 @contextlib.asynccontextmanager
@@ -95,35 +179,13 @@ async def lifespan(app: fastapi.FastAPI):
 
     # Initialize persistent MQTT client if env vars provided
     # persistent MQTT client lives on _state
-    if (
-        os.environ.get('MQTT_BROKER_URL')
-        and os.environ.get('MQTT_USERNAME')
-        and os.environ.get('MQTT_PASSWORD')
-    ):
-        try:
-            _state.mqtt_client = MQTTClient()
-            _state.mqtt_client.connect(
-                os.environ['MQTT_BROKER_URL'],
-                os.environ['MQTT_USERNAME'],
-                os.environ['MQTT_PASSWORD'],
-            )
-            # Wait briefly for connection (non-fatal if not connected yet)
-            start = time.time()
-            while not _state.mqtt_client.connected and time.time() - start < 5:
-                await asyncio.sleep(0.1)
-            if _state.mqtt_client.connected:
-                _logger.info('Persistent MQTT client started')
-            else:
-                _logger.warning('Persistent MQTT client not connected after timeout')
-            runtime_state.set_mqtt_connected(_state.mqtt_client.connected)
-        except Exception:  # don't fail whole app; log
-            _logger.exception('Failed to start persistent MQTT client')
-            _state.mqtt_client = None
-            runtime_state.set_mqtt_connected(None)
+    if _mqtt_env_is_configured():
+        await _reconnect_mqtt_client()
     else:
         _logger.warning(
             'MQTT environment variables not fully set; skipping MQTT client initialization'
         )
+        runtime_state.set_mqtt_connected(None)
 
     if not missing_vars:
         # Register webhook in background so startup can complete and Strava can verify callback URL.
@@ -142,11 +204,7 @@ async def lifespan(app: fastapi.FastAPI):
         _state.webhook_registration_task = None
 
     if _state.mqtt_client:
-        try:
-            _state.mqtt_client.disconnect()
-            _logger.info('Persistent MQTT client disconnected')
-        except Exception:
-            _logger.exception('Error disconnecting MQTT client')
+        await _disconnect_mqtt_client()
     await _delete_webhook()
 
 
@@ -161,6 +219,16 @@ def healthz():  # simple liveness/readiness probe
         'connected' if _state.mqtt_client and _state.mqtt_client.connected else 'disconnected'
     )
     return {'status': 'ok', 'subscription_id': sub_id, 'mqtt_status': mqtt_status}
+
+
+@app.post('/api/mqtt/disconnect')
+async def disconnect_mqtt() -> dict[str, Any]:
+    return await _disconnect_mqtt_client()
+
+
+@app.post('/api/mqtt/reconnect')
+async def reconnect_mqtt() -> dict[str, Any]:
+    return await _reconnect_mqtt_client()
 
 
 @app.get('/strava/webhook')
@@ -267,7 +335,11 @@ def main() -> None:  # entry point
     uvicorn.run(app, host='0.0.0.0', port=port)
 
 
-register_status_page(app)
+register_status_page(
+    app,
+    mqtt_disconnect_action=_disconnect_mqtt_client,
+    mqtt_reconnect_action=_reconnect_mqtt_client,
+)
 
 
 if __name__ == '__main__':  # pragma: no cover
