@@ -8,7 +8,7 @@ import fastapi
 from nicegui import events, ui
 
 from strava_sensor.fitfile.model import DeviceStatus
-from strava_sensor.last_activity_store import LastActivityMetadata
+from strava_sensor.last_activity_store import PersistedSensorState
 from strava_sensor.runtime_state import runtime_state
 from strava_sensor.strava.webhook import manager_singleton
 
@@ -49,6 +49,8 @@ class PersistedDeviceView:
     battery_level: str
     battery_status: str
     battery_voltage: str
+    last_activity_marker: str
+    last_activity_marker_color: str
     serial_number: str
     manufacturer: str
     product: str
@@ -60,9 +62,9 @@ class PersistedDeviceView:
 class StatusViewModel:
     def __init__(
         self,
-        last_activity_loader: t.Callable[[], LastActivityMetadata | None] | None = None,
+        persisted_sensor_loader: t.Callable[[], PersistedSensorState | None] | None = None,
     ) -> None:
-        self._last_activity_loader = last_activity_loader
+        self._persisted_sensor_loader = persisted_sensor_loader
         self.subscription_id = '—'
         self.webhook_url = '—'
         self.webhook_error = '—'
@@ -77,10 +79,11 @@ class StatusViewModel:
         self.last_activity_time = '—'
         self.last_fit_error_message = '—'
         self.last_fit_error_time = '—'
-        self.last_persisted_activity_id = '—'
-        self.last_persisted_recorded_at = '—'
-        self.last_persisted_device_count = '—'
-        self.last_persisted_devices: list[PersistedDeviceView] = []
+        self.persisted_sensor_updated_at = '—'
+        self.persisted_sensor_count = '—'
+        self.persisted_last_activity_id = '—'
+        self.persisted_last_activity_time = '—'
+        self.persisted_sensors: list[PersistedDeviceView] = []
         self.env_strava_client_id = 'missing'
         self.env_strava_client_secret = 'missing'
         self.env_strava_webhook_url = 'missing'
@@ -159,40 +162,54 @@ class StatusViewModel:
         self.env_mqtt_broker_url = _env_value('MQTT_BROKER_URL')
         self.env_mqtt_username = _env_value('MQTT_USERNAME')
         self.env_mqtt_password = _env_value('MQTT_PASSWORD')
-        self._update_last_activity_metadata()
+        self._update_persisted_sensor_state()
 
-    def _update_last_activity_metadata(self) -> None:
-        if self._last_activity_loader is None:
-            self.last_persisted_activity_id = '—'
-            self.last_persisted_recorded_at = '—'
-            self.last_persisted_device_count = '—'
-            self.last_persisted_devices = []
+    def _update_persisted_sensor_state(self) -> None:
+        if self._persisted_sensor_loader is None:
+            self.persisted_sensor_updated_at = '—'
+            self.persisted_sensor_count = '—'
+            self.persisted_last_activity_id = '—'
+            self.persisted_last_activity_time = '—'
+            self.persisted_sensors = []
             return
 
-        metadata = self._last_activity_loader()
+        metadata = self._persisted_sensor_loader()
         if not metadata:
-            self.last_persisted_activity_id = '—'
-            self.last_persisted_recorded_at = '—'
-            self.last_persisted_device_count = '—'
-            self.last_persisted_devices = []
+            self.persisted_sensor_updated_at = '—'
+            self.persisted_sensor_count = '—'
+            self.persisted_last_activity_id = '—'
+            self.persisted_last_activity_time = '—'
+            self.persisted_sensors = []
             return
 
-        self.last_persisted_activity_id = str(metadata.activity_id)
-        self.last_persisted_recorded_at = _format_time(metadata.recorded_at)
-        self.last_persisted_device_count = str(len(metadata.devices))
-        self.last_persisted_devices = self._format_devices(metadata.devices)
+        self.persisted_sensor_updated_at = _format_time(metadata.updated_at)
+        self.persisted_sensor_count = str(len(metadata.devices))
+        self.persisted_last_activity_id = (
+            str(metadata.last_activity_id) if metadata.last_activity_id is not None else '—'
+        )
+        self.persisted_last_activity_time = _format_time(metadata.last_activity_recorded_at)
+        last_activity_serials = set(metadata.last_activity_device_serials)
+        self.persisted_sensors = self._format_devices(metadata.devices, last_activity_serials)
 
     @staticmethod
-    def _format_devices(devices: list[DeviceStatus]) -> list[PersistedDeviceView]:
+    def _format_devices(
+        devices: list[DeviceStatus], last_activity_serials: set[str]
+    ) -> list[PersistedDeviceView]:
         views: list[PersistedDeviceView] = []
         for device in devices:
+            serial = str(device.serial_number)
+            is_from_last_activity = serial in last_activity_serials
             views.append(
                 PersistedDeviceView(
                     title=f'#{device.device_index} {_pretty_name(device.device_type)}',
                     battery_level=_format_battery_level(device.battery_level),
                     battery_status=str(device.battery_status),
                     battery_voltage=_format_voltage(device.battery_voltage),
-                    serial_number=str(device.serial_number),
+                    last_activity_marker=(
+                        'last activity' if is_from_last_activity else 'known (older)'
+                    ),
+                    last_activity_marker_color='positive' if is_from_last_activity else 'grey',
+                    serial_number=serial,
                     manufacturer=_pretty_name(device.manufacturer),
                     product=device.product,
                     source_type=_pretty_name(device.source_type),
@@ -208,7 +225,7 @@ def register_status_page(
     mqtt_disconnect_action: t.Callable[[], t.Awaitable[dict[str, t.Any]]] | None = None,
     mqtt_reconnect_action: t.Callable[[], t.Awaitable[dict[str, t.Any]]] | None = None,
     fit_upload_action: t.Callable[[str, bytes], t.Awaitable[dict[str, t.Any]]] | None = None,
-    last_activity_loader: t.Callable[[], LastActivityMetadata | None] | None = None,
+    persisted_sensor_loader: t.Callable[[], PersistedSensorState | None] | None = None,
 ) -> None:
     @app.get('/status')
     def status_redirect() -> fastapi.responses.RedirectResponse:
@@ -216,7 +233,7 @@ def register_status_page(
 
     @ui.page('/')
     def status_page() -> None:
-        model = StatusViewModel(last_activity_loader=last_activity_loader)
+        model = StatusViewModel(persisted_sensor_loader=persisted_sensor_loader)
         device_cards_container: t.Any | None = None
         fit_upload_input: t.Any | None = None
         ui.add_head_html(
@@ -384,21 +401,25 @@ def register_status_page(
         def _render_persisted_devices(container: t.Any) -> None:
             container.clear()
             with container:
-                if not model.last_persisted_devices:
+                if not model.persisted_sensors:
                     ui.label('No persisted device status available yet.').classes(
                         'text-sm text-slate-500'
                     )
                     return
 
-                for device in model.last_persisted_devices:
+                for device in model.persisted_sensors:
                     with ui.card().classes('status-device-card w-full'):
                         with ui.row().classes(
                             'w-full items-center justify-between gap-2 flex-wrap'
                         ):
                             ui.label(device.title).classes('text-base font-semibold text-slate-900')
-                            ui.badge(f'{device.battery_level} ({device.battery_status})').props(
-                                f'color={_battery_status_color(device.battery_status)}'
-                            ).classes('text-xs px-3 py-1 rounded-full font-semibold')
+                            with ui.row().classes('items-center gap-2'):
+                                ui.badge(device.last_activity_marker).props(
+                                    f'color={device.last_activity_marker_color}'
+                                ).classes('text-xs px-3 py-1 rounded-full font-semibold')
+                                ui.badge(f'{device.battery_level} ({device.battery_status})').props(
+                                    f'color={_battery_status_color(device.battery_status)}'
+                                ).classes('text-xs px-3 py-1 rounded-full font-semibold')
                         with ui.element('div').classes('status-device-grid'):
                             _render_device_value('Serial', device.serial_number)
                             _render_device_value(
@@ -454,18 +475,23 @@ def register_status_page(
                 _render_field('Last FIT Error', 'last_fit_error_message')
                 _render_field('Error Time', 'last_fit_error_time', monospace=True)
                 _render_field(
-                    'Persisted Activity ID',
-                    'last_persisted_activity_id',
+                    'Persisted Sensors Updated At',
+                    'persisted_sensor_updated_at',
                     monospace=True,
                 )
                 _render_field(
-                    'Persisted At',
-                    'last_persisted_recorded_at',
+                    'Persisted Sensor Count',
+                    'persisted_sensor_count',
                     monospace=True,
                 )
                 _render_field(
-                    'Device Count',
-                    'last_persisted_device_count',
+                    'Persisted Last Activity ID',
+                    'persisted_last_activity_id',
+                    monospace=True,
+                )
+                _render_field(
+                    'Persisted Last Activity Time',
+                    'persisted_last_activity_time',
                     monospace=True,
                 )
                 ui.label('Devices').classes('status-key pt-3')
