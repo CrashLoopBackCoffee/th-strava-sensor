@@ -235,7 +235,7 @@ async def _process_activity_async(activity_id: int) -> None:
 def main() -> None:  # entry point
     setup_logging()
     port = int(os.environ.get('WEBHOOK_PORT', '8000'))
-    _logger.info('Starting webhook server on port %s', port)
+    _logger.info('Starting webhook server on http://localhost:%s', port)
     uvicorn.run(app, host='0.0.0.0', port=port)
 
 

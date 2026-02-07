@@ -78,7 +78,11 @@ class StatusViewModel:
 
 
 def register_status_page(app: fastapi.FastAPI) -> None:
-    @ui.page('/status')
+    @app.get('/status')
+    def status_redirect() -> fastapi.responses.RedirectResponse:
+        return fastapi.responses.RedirectResponse(url='/', status_code=307)
+
+    @ui.page('/')
     def status_page() -> None:
         model = StatusViewModel()
 

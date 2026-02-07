@@ -130,7 +130,7 @@ The listener will:
 While the listener is running, a NiceGUI status overview is available at:
 
 ```bash
-http://localhost:8000/status
+http://localhost:8000/
 ```
 
 The status page shows webhook subscription state, MQTT connectivity, and the latest activity
