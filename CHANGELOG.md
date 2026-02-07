@@ -1,3 +1,48 @@
+# v2.0.0 (Sat Feb 07 2026)
+
+#### 🚨 Breaking Changes
+
+- Change release workflow to auto [#94](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/94) ([@tobiashenkel](https://github.com/tobiashenkel))
+
+#### ✨ Enhancements
+
+- Speed up tests: reuse parsed FIT fixture & disable retry backoff [#88](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/88) ([@tobiashenkel](https://github.com/tobiashenkel))
+- Pin garminconnnect [#84](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/84) ([@tobiashenkel](https://github.com/tobiashenkel))
+
+#### 📖 Documentation
+
+- Consolidate agent guidance into AGENTS.md [#86](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/86) ([@tobiashenkel](https://github.com/tobiashenkel))
+
+#### 🔧 Other Changes
+
+- fix(ci): parse auto changelog header versions [#102](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/102) ([@tobiashenkel](https://github.com/tobiashenkel))
+- fix(ci): simplify auto changelog workflow [#101](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/101) ([@tobiashenkel](https://github.com/tobiashenkel))
+- Disallow `from __future__ import annotations` in AGENTS.md [#100](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/100) ([@tobiashenkel](https://github.com/tobiashenkel))
+- fix(ci): make changelog versioning deterministic [#99](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/99) ([@tobiashenkel](https://github.com/tobiashenkel))
+- fix(ci): load git-tag plugin for auto changelog [#98](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/98) ([@tobiashenkel](https://github.com/tobiashenkel))
+- chore(deps): update dependency node to v24 [#97](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/97) ([@renovate[bot]](https://github.com/renovate[bot]))
+- chore(deps): update actions/setup-node action to v6 [#96](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/96) ([@renovate[bot]](https://github.com/renovate[bot]))
+- chore(deps): update dependency auto to v11.3.6 [#95](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/95) ([@renovate[bot]](https://github.com/renovate[bot]))
+- chore(deps): update python docker tag to v3.14 - autoclosed [#80](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/80) ([@renovate[bot]](https://github.com/renovate[bot]))
+- chore(deps): update ghcr.io/astral-sh/uv docker tag to v0.10.0 [#93](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/93) ([@renovate[bot]](https://github.com/renovate[bot]))
+- Downgrade UV_VERSION from 0.10.0 to 0.8.0 [#91](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/91) ([@tobiashenkel](https://github.com/tobiashenkel))
+- Fix uv renovate config [#90](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/90) ([@tobiashenkel](https://github.com/tobiashenkel))
+- chore(ci): use setup-project action in workflows [#89](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/89) ([@tobiashenkel](https://github.com/tobiashenkel))
+- Expose UV_VERSION env in Docker workflow (Renovate metadata, value unchanged) [#87](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/87) ([@tobiashenkel](https://github.com/tobiashenkel))
+- chore(deps): lock file maintenance [#78](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/78) ([@renovate[bot]](https://github.com/renovate[bot]))
+- fix(deps): update dependency garminconnect to v0.2.38 [#85](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/85) ([@renovate[bot]](https://github.com/renovate[bot]) [@tobiashenkel](https://github.com/tobiashenkel))
+- chore(deps): update ghcr.io/astral-sh/uv docker tag to v0.10.0 [#77](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/77) ([@renovate[bot]](https://github.com/renovate[bot]))
+- chore(deps): update actions/setup-python action to v6 [#79](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/79) ([@renovate[bot]](https://github.com/renovate[bot]))
+- chore(deps): update astral-sh/setup-uv action to v7 [#81](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/81) ([@renovate[bot]](https://github.com/renovate[bot]))
+- chore(deps): update actions/checkout action to v6 [#82](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/82) ([@renovate[bot]](https://github.com/renovate[bot]))
+
+#### Authors: 2
+
+- [@renovate[bot]](https://github.com/renovate[bot])
+- Tobias Henkel ([@tobiashenkel](https://github.com/tobiashenkel))
+
+---
+
 # Changelog
 
 ## [1.1.2](https://github.com/CrashLoopBackCoffee/th-strava-sensor/compare/v1.1.1..v1.1.2) - 2025-08-20
