@@ -72,6 +72,11 @@ uv run strava-sensor
 - `cli.py`: Main CLI interface with source initialization and coordination
 - `webhook_server.py`: FastAPI server for Strava webhook processing with persistent MQTT client
 
+**Web UI (`src/strava_sensor/ui/`)**
+- `status_page.py`: NiceGUI status dashboard mounted into the FastAPI app
+- The UI is registered from `webhook_server.py` via `register_status_page(app, ...)`
+- UI actions should delegate to backend callables (e.g., MQTT reconnect/disconnect, manual FIT upload) instead of duplicating processing logic in UI handlers
+
 **MQTT Integration (`src/strava_sensor/mqtt/`)**
 - `mqtt.py`: MQTT client wrapper with Home Assistant auto-discovery support
 
@@ -178,6 +183,12 @@ MODEL_OVERRIDE = {
 2. Fetch activity via Strava API → delegate to downstream sources
 3. Parse FIT file → extract devices → publish via persistent MQTT client
 4. Async processing to avoid blocking webhook responses
+
+### NiceGUI Status UI
+1. `ui.run_with(app)` binds NiceGUI routes to the existing FastAPI app (single server process)
+2. `StatusViewModel` pulls data from `runtime_state.snapshot()` plus environment variables
+3. `ui.timer(5.0, model.update)` keeps dashboard fields fresh
+4. For interactive controls, add backend action callables in `register_status_page(...)` and invoke them from UI event handlers
 
 ### Local Development with Webhooks
 Use localtunnel for public HTTPS endpoint during development:

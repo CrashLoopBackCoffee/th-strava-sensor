@@ -17,7 +17,12 @@ import fastapi
 import uvicorn
 
 from strava_sensor.cli import initialize_sources, setup_logging
-from strava_sensor.fitfile.fitfile import CorruptedFitFileError, FitFile, NotAFitFileError
+from strava_sensor.fitfile.fitfile import (
+    CorruptedFitFileError,
+    FitFile,
+    InvalidActivityFileError,
+    NotAFitFileError,
+)
 from strava_sensor.fitfile.model import DeviceStatus
 from strava_sensor.last_activity_store import LastActivityStore
 from strava_sensor.mqtt.mqtt import MQTTClient
@@ -127,6 +132,55 @@ def _on_mqtt_connect(mqtt_client: MQTTClient) -> None:
         _republish_last_activity_metadata(mqtt_client)
     except Exception:
         _logger.exception('Failed to republish persisted activity metadata on MQTT connect')
+
+
+async def _sync_mqtt_state() -> None:
+    if _state.mqtt_client:
+        start = time.time()
+        while not _state.mqtt_client.connected and time.time() - start < 5:
+            await asyncio.sleep(0.1)
+        runtime_state.set_mqtt_connected(_state.mqtt_client.connected)
+        return
+    runtime_state.set_mqtt_connected(None)
+
+
+def _publish_devices_statuses(devices_status: list[DeviceStatus]) -> None:
+    for device_status in devices_status:
+        _logger.info(
+            'Publishing device %s battery %s%%',
+            device_status.serial_number,
+            device_status.battery_level,
+        )
+        if _state.mqtt_client:
+            success = device_status.publish_on_mqtt(_state.mqtt_client)
+            runtime_state.record_mqtt_publish(
+                str(device_status.serial_number),
+                success,
+            )
+            if not success:
+                _logger.warning(
+                    'Failed to publish MQTT data for device %s',
+                    device_status.serial_number,
+                )
+
+
+async def _process_fit_bytes_async(
+    activity_id: int, fit_bytes: bytearray | bytes
+) -> list[DeviceStatus]:
+    loop = asyncio.get_event_loop()
+    fit_payload = fit_bytes if isinstance(fit_bytes, bytearray) else bytearray(fit_bytes)
+    fitfile = await loop.run_in_executor(None, FitFile, fit_payload)
+    _logger.debug('Parsed FIT file for activity %s', activity_id)
+
+    devices_status = fitfile.get_devices_status()
+    _persist_last_activity_metadata(activity_id, devices_status)
+    await _sync_mqtt_state()
+
+    if not devices_status:
+        _logger.info('No devices found in activity %s', activity_id)
+
+    _publish_devices_statuses(devices_status)
+    return devices_status
 
 
 async def _disconnect_mqtt_client() -> dict[str, Any]:
@@ -323,44 +377,9 @@ async def _process_activity_async(activity_id: int) -> None:
         # Run the synchronous operations in a thread pool to avoid blocking the event loop
         fit_bytes = await asyncio.to_thread(strava_source.read_activity, activity_url)
         _logger.debug('Read %d bytes from Strava activity %s', len(fit_bytes), activity_id)
-
-        fitfile = await asyncio.to_thread(FitFile, fit_bytes)
-        _logger.debug('Parsed FIT file for activity %s', activity_id)
-
-        devices_status = fitfile.get_devices_status()
-        _persist_last_activity_metadata(activity_id, devices_status)
-
-        # Reuse persistent MQTT client if available
-        if _state.mqtt_client:
-            start = time.time()
-            while not _state.mqtt_client.connected and time.time() - start < 5:
-                await asyncio.sleep(0.1)
-            runtime_state.set_mqtt_connected(_state.mqtt_client.connected)
-        else:
-            runtime_state.set_mqtt_connected(None)
-
-        if not devices_status:
-            _logger.info('No devices found in activity %s', activity_id)
-
-        for device_status in devices_status:
-            _logger.info(
-                'Publishing device %s battery %s%%',
-                device_status.serial_number,
-                device_status.battery_level,
-            )
-            if _state.mqtt_client:
-                success = device_status.publish_on_mqtt(_state.mqtt_client)
-                runtime_state.record_mqtt_publish(
-                    str(device_status.serial_number),
-                    success,
-                )
-                if not success:
-                    _logger.warning(
-                        'Failed to publish MQTT data for device %s',
-                        device_status.serial_number,
-                    )
+        await _process_fit_bytes_async(activity_id, fit_bytes)
     # Do not disconnect persistent client here
-    except (NotAFitFileError, CorruptedFitFileError) as e:
+    except (NotAFitFileError, CorruptedFitFileError, InvalidActivityFileError) as e:
         runtime_state.record_fit_error(str(e))
         _logger.error('FIT parse error for activity %s: %s', activity_id, e)
     except Exception:
@@ -368,6 +387,33 @@ async def _process_activity_async(activity_id: int) -> None:
             f'Unhandled error at {datetime.datetime.now(datetime.UTC).isoformat()}'
         )
         _logger.exception('Unhandled error processing activity %s', activity_id)
+
+
+async def _process_manual_fit_upload(filename: str, fit_bytes: bytes) -> dict[str, Any]:
+    # Use a timestamp-based synthetic id so manual debug uploads are visible in runtime state.
+    activity_id = int(datetime.datetime.now(datetime.UTC).timestamp() * 1000)
+    runtime_state.record_activity_start(activity_id)
+    _logger.info(
+        'Processing manually uploaded FIT file %s with synthetic id %s', filename, activity_id
+    )
+    try:
+        devices_status = await _process_fit_bytes_async(activity_id, fit_bytes)
+    except (NotAFitFileError, CorruptedFitFileError, InvalidActivityFileError) as e:
+        error_message = str(e) or e.__class__.__name__
+        runtime_state.record_fit_error(error_message)
+        _logger.error('FIT parse error for manually uploaded file %s: %s', filename, error_message)
+        return {'ok': False, 'message': f'Failed to parse FIT file "{filename}": {error_message}'}
+    except Exception:
+        runtime_state.record_fit_error(
+            f'Unhandled error at {datetime.datetime.now(datetime.UTC).isoformat()}'
+        )
+        _logger.exception('Unhandled error processing manually uploaded file %s', filename)
+        return {'ok': False, 'message': f'Unhandled error while processing "{filename}"'}
+
+    return {
+        'ok': True,
+        'message': f'Processed "{filename}" and found {len(devices_status)} device(s)',
+    }
 
 
 def main() -> None:  # entry point
@@ -382,6 +428,8 @@ register_status_page(
     app,
     mqtt_disconnect_action=_disconnect_mqtt_client,
     mqtt_reconnect_action=_reconnect_mqtt_client,
+    fit_upload_action=_process_manual_fit_upload,
+    last_activity_loader=_last_activity_store.load,
 )
 
 

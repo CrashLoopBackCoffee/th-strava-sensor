@@ -6,6 +6,7 @@ import pathlib
 import typing as t
 
 import garmin_fit_sdk
+import pydantic
 
 from strava_sensor.fitfile.model import DeviceStatus
 
@@ -105,7 +106,15 @@ class FitFile:
             # Strip message of int keys which break pydantic validation
             message_stripped = {k: v for k, v in message.items() if isinstance(k, str)}
 
-            device_status = DeviceStatus.model_validate(message_stripped)
+            try:
+                device_status = DeviceStatus.model_validate(message_stripped)
+            except pydantic.ValidationError as exc:
+                _logger.warning(
+                    'Skipping invalid device_info message with battery data: %s (message=%s)',
+                    exc,
+                    message_stripped,
+                )
+                continue
             device_status_by_index[device_status.device_index] = device_status
 
         return list(device_status_by_index.values())
