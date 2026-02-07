@@ -1,3 +1,20 @@
+# v2.0.2 (Sat Feb 07 2026)
+
+#### 🐛 Bug Fixes
+
+- chore(ci): re-enable auto git-tag plugin [#107](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/107) ([@tobiashenkel](https://github.com/tobiashenkel))
+- fix(ci): make release notes extraction deterministic [#106](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/106) ([@tobiashenkel](https://github.com/tobiashenkel))
+
+#### 🔧 Other Changes
+
+- fix(ci): use auto release binary in changelog workflow [#108](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/108) ([@tobiashenkel](https://github.com/tobiashenkel))
+
+#### Authors: 1
+
+- Tobias Henkel ([@tobiashenkel](https://github.com/tobiashenkel))
+
+---
+
 # v2.0.1 (Sat Feb 07 2026)
 
 #### 🐛 Bug Fixes
