@@ -361,6 +361,61 @@ async def test_process_activity_persists_last_activity_metadata(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_process_manual_fit_upload_success(monkeypatch):
+    devices = [FakeDeviceStatus('1234')]
+    save_calls = []
+
+    class FakeFitFile:
+        def __init__(self, _fit_bytes: bytes):
+            pass
+
+        def get_devices_status(self):
+            return devices
+
+    class FakeStore:
+        def save(self, activity_id, saved_devices):
+            save_calls.append((activity_id, saved_devices))
+
+    monkeypatch.setattr(webhook_server, 'FitFile', FakeFitFile)
+    monkeypatch.setattr(webhook_server, '_last_activity_store', FakeStore())
+    monkeypatch.setattr(webhook_server._state, 'mqtt_client', None)
+
+    result = await webhook_server._process_manual_fit_upload('debug.fit', b'fit-bytes')
+
+    assert result == {'ok': True, 'message': 'Processed "debug.fit" and found 1 device(s)'}
+    assert len(save_calls) == 1
+    assert isinstance(save_calls[0][0], int)
+    assert save_calls[0][1] == devices
+
+
+@pytest.mark.asyncio
+async def test_process_manual_fit_upload_fit_parse_error(monkeypatch):
+    fit_errors = []
+
+    class FakeFitFile:
+        def __init__(self, _fit_bytes: bytes):
+            raise webhook_server.NotAFitFileError('invalid fit')
+
+    def fake_record_fit_error(message):
+        fit_errors.append(message)
+
+    monkeypatch.setattr(webhook_server, 'FitFile', FakeFitFile)
+    monkeypatch.setattr(
+        webhook_server.runtime_state,
+        'record_fit_error',
+        fake_record_fit_error,
+    )
+
+    result = await webhook_server._process_manual_fit_upload('broken.fit', b'bad')
+
+    assert result == {
+        'ok': False,
+        'message': 'Failed to parse FIT file "broken.fit": invalid fit',
+    }
+    assert fit_errors == ['invalid fit']
+
+
+@pytest.mark.asyncio
 async def test_reconnect_mqtt_republishes_persisted_metadata(monkeypatch):
     monkeypatch.setenv('MQTT_BROKER_URL', 'mqtt://broker:1883')
     monkeypatch.setenv('MQTT_USERNAME', 'user')

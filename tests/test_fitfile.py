@@ -107,3 +107,21 @@ def test__fitfile__devices_status(fitfile_fixture):
     assert bike_speed.source_type == 'antplus'
     assert bike_speed.software_version == '2.5'
     assert bike_speed.hardware_version == '187'
+
+
+def test__fitfile__devices_status_ignores_invalid_device_info_message(fitfile_fixture):
+    fitfile = copy.deepcopy(fitfile_fixture)
+    fitfile.messages['device_info_mesgs'].append(  # type: ignore[arg-type]
+        {
+            'timestamp': datetime.datetime.now(datetime.UTC),
+            'device_index': 2,
+            'device_type': 'bike_power',
+            'battery_status': 'good',
+            # intentionally missing required fields like serial_number and manufacturer
+        }
+    )
+
+    device_statuses = fitfile.get_devices_status()
+    assert len(device_statuses) == 3
+    bike_power = [device for device in device_statuses if device.device_type == 'bike_power'][0]
+    assert bike_power.serial_number == '7891445'

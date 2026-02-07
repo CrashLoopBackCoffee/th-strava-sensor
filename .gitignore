@@ -173,3 +173,4 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+.strava_sensor_last_activity.json
