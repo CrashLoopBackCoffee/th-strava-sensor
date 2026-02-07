@@ -17,7 +17,7 @@ permissions:
   pull-requests: write
 
 env:
-  # renovate: datasource=npm packageName=auto
+  # renovate: datasource=github-releases packageName=intuit/auto
   AUTO_VERSION: 11.3.6
   GH_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN || github.token }}
 
@@ -41,13 +41,15 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
+      - name: Install auto binary
+        run: |
+          curl -sSL -o - "https://github.com/intuit/auto/releases/download/v${{ env.AUTO_VERSION }}/auto-linux.gz" \
+            | gunzip > "$RUNNER_TEMP/auto"
+          chmod +x "$RUNNER_TEMP/auto"
+          "$RUNNER_TEMP/auto" --version
 
       - name: Generate changelog with auto
-        run: npx -y auto@${{ env.AUTO_VERSION }} changelog --no-git-commit
+        run: '"$RUNNER_TEMP/auto" changelog --no-git-commit'
         env:
           GH_TOKEN: ${{ env.GH_TOKEN }}
 
