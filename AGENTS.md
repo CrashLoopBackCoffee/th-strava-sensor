@@ -51,7 +51,7 @@ uv run parse-activity https://www.strava.com/activities/123456789
 uv run parse-activity --publish file:///path/to/activity.fit
 
 # Start webhook server for automatic Strava activity processing
-uv run strava-webhook-listener
+uv run strava-sensor
 ```
 
 ## Architecture Overview
@@ -189,7 +189,7 @@ scripts/run-localtunnel.sh mystravawebhook
 export STRAVA_WEBHOOK_URL="https://mystravawebhook.loca.lt/strava/webhook"
 
 # Start webhook server
-uv run strava-webhook-listener
+uv run strava-sensor
 ```
 
 This architecture enables flexible, extensible activity processing with robust error handling and Home Assistant integration.

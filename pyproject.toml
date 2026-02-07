@@ -14,6 +14,7 @@ dependencies = [
     "requests>=2.32.3",
     "stravalib>=2.3",
     "fastapi>=0.115.0",
+    "nicegui>=1.4.29",
     "uvicorn>=0.30.0",
 ]
 
@@ -38,7 +39,7 @@ build-backend = "hatchling.build"
 
 [project.scripts]
 parse-activity = "strava_sensor.cli:main"
-strava-webhook-listener = "strava_sensor.webhook_server:main"
+strava-sensor = "strava_sensor.webhook_server:main"
 
 [tool.ruff]
 line-length = 100

@@ -6,6 +6,7 @@ webhook activity processing threads. Lint warning for global reassignment is acc
 
 import asyncio
 import contextlib
+import datetime
 import logging
 import os
 import time
@@ -18,15 +19,41 @@ import uvicorn
 from strava_sensor.cli import initialize_sources, setup_logging
 from strava_sensor.fitfile.fitfile import CorruptedFitFileError, FitFile, NotAFitFileError
 from strava_sensor.mqtt.mqtt import MQTTClient
+from strava_sensor.runtime_state import runtime_state
 from strava_sensor.source.strava import StravaSource
 from strava_sensor.strava.webhook import manager_singleton
+from strava_sensor.ui.status_page import register_status_page
 
 _logger = logging.getLogger(__name__)
+
+
+def _get_registration_delay_seconds() -> float:
+    raw_delay = os.environ.get('STRAVA_WEBHOOK_REGISTRATION_DELAY', '0')
+    try:
+        delay_seconds = float(raw_delay)
+    except ValueError:
+        _logger.warning(
+            'Invalid STRAVA_WEBHOOK_REGISTRATION_DELAY=%s; defaulting to 0 seconds',
+            raw_delay,
+        )
+        return 0.0
+    if delay_seconds < 0:
+        _logger.warning(
+            'Negative STRAVA_WEBHOOK_REGISTRATION_DELAY=%s; defaulting to 0 seconds',
+            raw_delay,
+        )
+        return 0.0
+    return delay_seconds
 
 
 async def _register_webhook():
     """Register the Strava webhook subscription on startup."""
     try:
+        delay_seconds = _get_registration_delay_seconds()
+        if delay_seconds > 0:
+            _logger.info('Delaying Strava webhook registration by %.1f seconds', delay_seconds)
+            await asyncio.sleep(delay_seconds)
+
         _logger.info('Registering Strava webhook subscription')
         # Call async variant directly (avoid sync wrapper which uses asyncio.run())
         sub_id = await manager_singleton.ensure_subscription()
@@ -36,8 +63,9 @@ async def _register_webhook():
     except asyncio.CancelledError:
         _logger.info('Webhook registration task cancelled')
         raise
-    except Exception:
+    except Exception as exc:
         _logger.exception('Failed to register Strava webhook subscription')
+        runtime_state.record_webhook_error(str(exc))
 
 
 async def _delete_webhook():
@@ -62,8 +90,8 @@ async def lifespan(app: fastapi.FastAPI):
     missing_vars = [var for var in required_env_vars if not os.environ.get(var)]
     if missing_vars:
         error_msg = f'Missing required environment variables: {", ".join(missing_vars)}'
-        _logger.error(error_msg)
-        raise RuntimeError(error_msg)
+        _logger.warning(error_msg)
+        runtime_state.record_webhook_error(error_msg)
 
     # Initialize persistent MQTT client if env vars provided
     # persistent MQTT client lives on _state
@@ -87,15 +115,22 @@ async def lifespan(app: fastapi.FastAPI):
                 _logger.info('Persistent MQTT client started')
             else:
                 _logger.warning('Persistent MQTT client not connected after timeout')
+            runtime_state.set_mqtt_connected(_state.mqtt_client.connected)
         except Exception:  # don't fail whole app; log
             _logger.exception('Failed to start persistent MQTT client')
             _state.mqtt_client = None
+            runtime_state.set_mqtt_connected(None)
+    else:
+        _logger.warning(
+            'MQTT environment variables not fully set; skipping MQTT client initialization'
+        )
 
-    # Register webhook in background so startup can complete and Strava can verify callback URL.
-    _state.webhook_registration_task = asyncio.create_task(
-        _register_webhook(),
-        name='strava-webhook-registration',
-    )
+    if not missing_vars:
+        # Register webhook in background so startup can complete and Strava can verify callback URL.
+        _state.webhook_registration_task = asyncio.create_task(
+            _register_webhook(),
+            name='strava-webhook-registration',
+        )
     yield
 
     # Shutdown sequence
@@ -161,6 +196,7 @@ async def handle_event(payload: dict[str, Any]):
 
 async def _process_activity_async(activity_id: int) -> None:
     _logger.info('Processing Strava activity %s from webhook', activity_id)
+    runtime_state.record_activity_start(activity_id)
     try:
         activity_url = f'https://www.strava.com/activities/{activity_id}'
         sources = initialize_sources()
@@ -189,6 +225,9 @@ async def _process_activity_async(activity_id: int) -> None:
             start = time.time()
             while not _state.mqtt_client.connected and time.time() - start < 5:
                 await asyncio.sleep(0.1)
+            runtime_state.set_mqtt_connected(_state.mqtt_client.connected)
+        else:
+            runtime_state.set_mqtt_connected(None)
 
         if not devices_status:
             _logger.info('No devices found in activity %s', activity_id)
@@ -201,6 +240,10 @@ async def _process_activity_async(activity_id: int) -> None:
             )
             if _state.mqtt_client:
                 success = device_status.publish_on_mqtt(_state.mqtt_client)
+                runtime_state.record_mqtt_publish(
+                    str(device_status.serial_number),
+                    success,
+                )
                 if not success:
                     _logger.warning(
                         'Failed to publish MQTT data for device %s',
@@ -208,16 +251,23 @@ async def _process_activity_async(activity_id: int) -> None:
                     )
     # Do not disconnect persistent client here
     except (NotAFitFileError, CorruptedFitFileError) as e:
+        runtime_state.record_fit_error(str(e))
         _logger.error('FIT parse error for activity %s: %s', activity_id, e)
     except Exception:
+        runtime_state.record_fit_error(
+            f'Unhandled error at {datetime.datetime.now(datetime.UTC).isoformat()}'
+        )
         _logger.exception('Unhandled error processing activity %s', activity_id)
 
 
 def main() -> None:  # entry point
     setup_logging()
     port = int(os.environ.get('WEBHOOK_PORT', '8000'))
-    _logger.info('Starting webhook server on port %s', port)
+    _logger.info('Starting webhook server on http://localhost:%s', port)
     uvicorn.run(app, host='0.0.0.0', port=port)
+
+
+register_status_page(app)
 
 
 if __name__ == '__main__':  # pragma: no cover
