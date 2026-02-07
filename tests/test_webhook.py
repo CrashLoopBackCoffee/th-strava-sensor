@@ -198,6 +198,26 @@ def test_mqtt_reconnect_endpoint(webhook_client, monkeypatch):
     assert r.json() == {'ok': False, 'connected': False, 'message': 'Failed to connect MQTT client'}
 
 
+def test_main_uses_websockets_sansio(monkeypatch):
+    captured: dict[str, object] = {}
+
+    monkeypatch.setenv('WEBHOOK_PORT', '8010')
+    monkeypatch.setattr(webhook_server, 'setup_logging', lambda: None)
+
+    def fake_run(app, **kwargs):
+        captured['app'] = app
+        captured.update(kwargs)
+
+    monkeypatch.setattr(webhook_server.uvicorn, 'run', fake_run)
+
+    webhook_server.main()
+
+    assert captured['app'] is webhook_server.app
+    assert captured['host'] == '0.0.0.0'
+    assert captured['port'] == 8010
+    assert captured['ws'] == 'websockets-sansio'
+
+
 @pytest.mark.asyncio
 async def test_retry_list_then_success(strava_webhook_env, monkeypatch):
     monkeypatch.setenv('STRAVA_SUBSCRIPTION_RETRIES', '3')
