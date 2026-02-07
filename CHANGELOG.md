@@ -40,6 +40,59 @@
 
 #### 🔧 Other Changes
 
+- chore: prepare release v2.1.0 [#112](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/112) ([@actions-user](https://github.com/actions-user) [@tobiashenkel](https://github.com/tobiashenkel))
+- chore(deps): lock file maintenance [#116](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/116) ([@renovate[bot]](https://github.com/renovate[bot]))
+
+#### Authors: 3
+
+- [@actions-user](https://github.com/actions-user)
+- [@renovate[bot]](https://github.com/renovate[bot])
+- Tobias Henkel ([@tobiashenkel](https://github.com/tobiashenkel))
+
+---
+
+# v2.1.0 (Sat Feb 07 2026)
+
+### Release Notes
+
+#### Add button to disconnect/reconnect mqtt ([#114](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/114))
+
+* **New Features**
+  * Added UI button on status page to disconnect and reconnect MQTT with real-time connection status display
+  * Introduced API endpoints for managing MQTT connections at runtime without application restart
+
+* **Tests**
+  * Added test coverage for MQTT management endpoints
+
+<!-- end of auto-generated comment: release notes by coderabbit.ai -->
+
+#### Fix strava webhook registration ([#113](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/113))
+
+* **Improvements**
+  * Webhook registration now proceeds asynchronously in the background, allowing the server to start immediately rather than waiting for registration to complete.
+  * Added proper cleanup of webhook registration tasks during server shutdown.
+
+* **Tests**
+  * Added test to verify webhook registration does not block the server startup process.
+
+<!-- end of auto-generated comment: release notes by coderabbit.ai -->
+
+---
+
+#### ✨ Enhancements
+
+- Add otel libs [#118](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/118) ([@tobiashenkel](https://github.com/tobiashenkel))
+- Store last activity on disk [#117](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/117) ([@tobiashenkel](https://github.com/tobiashenkel))
+- Add initial otel metrics [#115](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/115) ([@tobiashenkel](https://github.com/tobiashenkel))
+- Add button to disconnect/reconnect mqtt [#114](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/114) ([@tobiashenkel](https://github.com/tobiashenkel))
+- Use NiceGUI data binding for status overview [#109](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/109) ([@tobiashenkel](https://github.com/tobiashenkel))
+
+#### 🐛 Bug Fixes
+
+- Fix strava webhook registration [#113](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/113) ([@tobiashenkel](https://github.com/tobiashenkel))
+
+#### 🔧 Other Changes
+
 - chore(deps): lock file maintenance [#116](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/116) ([@renovate[bot]](https://github.com/renovate[bot]))
 
 #### Authors: 2
