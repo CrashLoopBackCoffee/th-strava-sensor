@@ -2,6 +2,7 @@
   "baseBranch": "main",
   "owner": "CrashLoopBackCoffee",
   "repo": "th-strava-sensor",
+  "plugins": ["git-tag"],
   "noDefaultLabels": true,
   "labels": [
     {
