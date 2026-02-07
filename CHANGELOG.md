@@ -1,3 +1,20 @@
+# v2.1.1 (Sat Feb 07 2026)
+
+#### 🐛 Bug Fixes
+
+- Fix websocker deprecation warning [#121](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/121) ([@tobiashenkel](https://github.com/tobiashenkel))
+
+#### 🔧 Other Changes
+
+- chore: prepare release v2.1.0 [#119](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/119) ([@actions-user](https://github.com/actions-user) [@tobiashenkel](https://github.com/tobiashenkel))
+
+#### Authors: 2
+
+- [@actions-user](https://github.com/actions-user)
+- Tobias Henkel ([@tobiashenkel](https://github.com/tobiashenkel))
+
+---
+
 # v2.1.0 (Sat Feb 07 2026)
 
 ### Release Notes
