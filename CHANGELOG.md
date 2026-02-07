@@ -1,3 +1,15 @@
+# v2.0.3 (Sat Feb 07 2026)
+
+#### 🐛 Bug Fixes
+
+- fix(ci): pass release version to notes extractor [#111](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/111) ([@tobiashenkel](https://github.com/tobiashenkel))
+
+#### Authors: 1
+
+- Tobias Henkel ([@tobiashenkel](https://github.com/tobiashenkel))
+
+---
+
 # v2.0.2 (Sat Feb 07 2026)
 
 #### 🐛 Bug Fixes
