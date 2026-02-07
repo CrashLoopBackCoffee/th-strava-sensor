@@ -16,9 +16,17 @@ permissions:
   contents: write
   pull-requests: write
 
+env:
+  # renovate: datasource=npm packageName=auto
+  AUTO_VERSION: 11.3.5
+
 jobs:
   generate-changelog:
-    if: github.event.action == 'closed' && github.event.pull_request.merged == true
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       github.event.action == 'closed' &&
+       github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -32,25 +40,30 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-      - name: Install git-cliff
-        uses: kenji-miyake/setup-git-cliff@v2
-
-      - name: Determine version bump type
-        id: bump_type
-        run: |
-          BUMP_TYPE=$(./scripts/determine-bump-type.sh)
-          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
-          echo "Determined bump type: $BUMP_TYPE"
-
-      - name: Generate changelog and bump version
-        id: changelog
-        uses: orhun/git-cliff-action@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          config: cliff.toml
-          args: --bump ${{ steps.bump_type.outputs.bump_type }}
+          node-version: '22'
+
+      - name: Generate changelog with auto
+        run: npx -y auto@${{ env.AUTO_VERSION }} changelog --no-git-commit --title "Changelog"
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
-          OUTPUT: CHANGELOG.md
+          GH_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }}
+
+      - name: Extract version from changelog
+        id: version
+        run: |
+          HEADER=$(
+            grep -m1 -E '^## (\[v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?\]|v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?)' CHANGELOG.md \
+            || true
+          )
+          VERSION=$(echo "$HEADER" | sed -E 's/^## \[?v?([0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?)\]?.*/\1/')
+          if [ -z "$VERSION" ]; then
+            echo "Failed to extract version from CHANGELOG.md"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "version_tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Setup project
         uses: ./.github/actions/setup-project
@@ -59,12 +72,9 @@ jobs:
 
       - name: Update pyproject.toml version
         run: |
-          # Update pyproject.toml with the new version from git-cliff
-          RAW_VERSION="${{ steps.changelog.outputs.version }}"
-          # Remove any 'v' prefix for pyproject.toml (Python packages should not have 'v' prefix)
-          NEW_VERSION="${RAW_VERSION#v}"
+          NEW_VERSION="${{ steps.version.outputs.version }}"
           sed -i "s/^version = .*/version = \"$NEW_VERSION\"/" pyproject.toml
-          echo "Updated version to $NEW_VERSION (from $RAW_VERSION)"
+          echo "Updated version to $NEW_VERSION"
 
       - name: Update uv.lock with new version
         run: |
@@ -85,13 +95,13 @@ jobs:
         if: steps.changes.outputs.has_changes == 'true'
         run: |
           BRANCH_NAME="release/next"
-          PR_TITLE="chore: prepare release ${{ steps.changelog.outputs.version }}"
+          PR_TITLE="chore: prepare release ${{ steps.version.outputs.version_tag }}"
           PR_BODY="## Release Preparation
 
-          This PR prepares for release \`${{ steps.changelog.outputs.version }}\` by:
+          This PR prepares for release \`${{ steps.version.outputs.version_tag }}\` by:
 
           - 📝 Updating CHANGELOG.md with all merged PRs since last release
-          - 🔢 Bumping version to \`${{ steps.changelog.outputs.version }}\` (automatically determined by git-cliff)
+          - 🔢 Bumping version to \`${{ steps.version.outputs.version_tag }}\` (automatically determined by auto)
 
           Once this PR is merged, a new GitHub release will be automatically created.
 
@@ -103,10 +113,10 @@ jobs:
 
           # Add and commit changes
           git add .
-          git commit -m "chore: prepare release ${{ steps.changelog.outputs.version }}
+          git commit -m "chore: prepare release ${{ steps.version.outputs.version_tag }}
 
           - Update CHANGELOG.md with latest changes
-          - Bump version to ${{ steps.changelog.outputs.version }}"
+          - Bump version to ${{ steps.version.outputs.version_tag }}"
 
           # Push branch (force-with-lease is safe for both new and existing)
           git push origin "$BRANCH_NAME" --force-with-lease

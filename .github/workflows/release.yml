@@ -27,33 +27,30 @@ jobs:
         uses: ./.github/actions/setup-project
         with:
           python-version: "3.13"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
 
-      - name: Install git-cliff
-        uses: kenji-miyake/setup-git-cliff@v2
-
-      - name: Determine version bump type
-        id: bump_type
+      - name: Read release version from pyproject.toml
+        id: version
         run: |
-          BUMP_TYPE=$(./scripts/determine-bump-type.sh)
-          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
-          echo "Determined bump type: $BUMP_TYPE"
+          python - <<'PY'
+          import os
+          import tomllib
+          from pathlib import Path
 
-      - name: Get version and generate release notes
-        id: cliff
-        uses: orhun/git-cliff-action@v4
-        with:
-          config: cliff.toml
-          args: --bump ${{ steps.bump_type.outputs.bump_type }} --unreleased --strip header
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          data = tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))
+          version = data['project']['version']
+
+          with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as fh:
+              fh.write(f'version={version}\n')
+              fh.write(f'tag=v{version}\n')
+          PY
 
       - name: Check if tag exists
         id: tag_check
         run: |
-          VERSION="${{ steps.cliff.outputs.version }}"
-          # Remove any existing 'v' prefix to normalize the version
-          VERSION="${VERSION#v}"
-          TAG="v$VERSION"
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
@@ -62,6 +59,22 @@ jobs:
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract release notes from changelog
+        if: steps.tag_check.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.tag_check.outputs.version }}"
+
+          awk -v version="$VERSION" '
+            ($0 ~ "^## \\[" version "\\]" || $0 ~ "^## v?" version "([[:space:]]|$|-)") { in_section=1; next }
+            in_section && /^## / { exit }
+            in_section { print }
+          ' CHANGELOG.md > release-notes.md
+
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "Failed to extract release notes for version $VERSION from CHANGELOG.md"
+            exit 1
           fi
 
       - name: Create Git Tag
@@ -89,7 +102,7 @@ jobs:
         with:
           tag_name: ${{ steps.tag_check.outputs.tag }}
           name: Release ${{ steps.tag_check.outputs.version }}
-          body: ${{ steps.cliff.outputs.content }}
+          body_path: release-notes.md
           files: |
             dist/*.whl
             dist/*.tar.gz

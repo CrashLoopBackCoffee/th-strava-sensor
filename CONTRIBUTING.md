@@ -252,8 +252,8 @@ This repository includes `.autorc` to bootstrap PR-label-based changelog generat
 
 - `.autorc` is the source of truth for label-to-semver/changelog mapping when using `auto`.
 - The `other` label is a maintained fallback for uncategorized PRs and maps to patch releases.
-- This bootstrap does not replace existing `git-cliff` automation in
-  `.github/workflows/changelog.yml` or `.github/workflows/release.yml` yet.
+- Release workflows in `.github/workflows/changelog.yml` and `.github/workflows/release.yml`
+  use `auto` as the changelog/version decision engine.
 
 Run the following commands when validating or generating changelog updates with `auto`:
 
