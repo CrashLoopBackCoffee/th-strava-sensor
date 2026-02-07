@@ -425,7 +425,7 @@ async def test_reconnect_mqtt_republishes_persisted_metadata(monkeypatch):
     saved_records = []
 
     class FakeMetadata:
-        activity_id = 99
+        updated_at = '2026-02-07T20:35:00Z'
         devices = [device]
 
     class FakeStore:

@@ -95,28 +95,26 @@ def _mqtt_env_is_configured() -> bool:
     return all(os.environ.get(name) for name in _MQTT_ENV_VARS)
 
 
-def _persist_last_activity_metadata(activity_id: int, devices_status: list[DeviceStatus]) -> None:
+def _persist_sensor_state(activity_id: int, devices_status: list[DeviceStatus]) -> None:
     _last_activity_store.save(activity_id, devices_status)
 
 
-def _republish_last_activity_metadata(mqtt_client: MQTTClient) -> None:
-    last_activity = _last_activity_store.load()
-    if not last_activity:
-        _logger.debug('No persisted activity metadata found to republish')
+def _republish_persisted_sensor_state(mqtt_client: MQTTClient) -> None:
+    persisted_state = _last_activity_store.load()
+    if not persisted_state:
+        _logger.debug('No persisted sensor state found to republish')
         return
-    if not last_activity.devices:
+    if not persisted_state.devices:
         _logger.info(
-            'Persisted activity metadata for activity %s has no devices to republish',
-            last_activity.activity_id,
+            'Persisted sensor state has no devices to republish',
         )
         return
 
     _logger.info(
-        'Republishing %s persisted device statuses from activity %s',
-        len(last_activity.devices),
-        last_activity.activity_id,
+        'Republishing %s persisted device statuses',
+        len(persisted_state.devices),
     )
-    for device_status in last_activity.devices:
+    for device_status in persisted_state.devices:
         success = device_status.publish_on_mqtt(mqtt_client)
         runtime_state.record_mqtt_publish(str(device_status.serial_number), success)
         if not success:
@@ -129,9 +127,9 @@ def _republish_last_activity_metadata(mqtt_client: MQTTClient) -> None:
 def _on_mqtt_connect(mqtt_client: MQTTClient) -> None:
     runtime_state.set_mqtt_connected(True)
     try:
-        _republish_last_activity_metadata(mqtt_client)
+        _republish_persisted_sensor_state(mqtt_client)
     except Exception:
-        _logger.exception('Failed to republish persisted activity metadata on MQTT connect')
+        _logger.exception('Failed to republish persisted sensor state on MQTT connect')
 
 
 async def _sync_mqtt_state() -> None:
@@ -173,7 +171,7 @@ async def _process_fit_bytes_async(
     _logger.debug('Parsed FIT file for activity %s', activity_id)
 
     devices_status = fitfile.get_devices_status()
-    _persist_last_activity_metadata(activity_id, devices_status)
+    _persist_sensor_state(activity_id, devices_status)
     await _sync_mqtt_state()
 
     if not devices_status:
@@ -429,7 +427,7 @@ register_status_page(
     mqtt_disconnect_action=_disconnect_mqtt_client,
     mqtt_reconnect_action=_reconnect_mqtt_client,
     fit_upload_action=_process_manual_fit_upload,
-    last_activity_loader=_last_activity_store.load,
+    persisted_sensor_loader=_last_activity_store.load,
 )
 
 
