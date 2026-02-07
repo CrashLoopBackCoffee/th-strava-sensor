@@ -64,8 +64,6 @@ jobs:
       - name: Extract release notes from changelog
         if: steps.tag_check.outputs.exists == 'false'
         run: |
-          VERSION="${{ steps.tag_check.outputs.version }}"
-
           python - <<'PY'
           import os
           import re
@@ -110,6 +108,8 @@ jobs:
           Path('release-notes.md').write_text(body + '\n', encoding='utf-8')
           print(f'Extracted release notes for version {version}')
           PY
+        env:
+          VERSION: ${{ steps.tag_check.outputs.version }}
 
       - name: Create Git Tag
         if: steps.tag_check.outputs.exists == 'false'
