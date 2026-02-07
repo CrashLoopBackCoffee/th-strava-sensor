@@ -245,6 +245,29 @@ We use Semantic Versioning (SemVer):
 - **MINOR**: New features (backward compatible)
 - **PATCH**: Bug fixes (backward compatible)
 
+### Auto Changelog Bootstrap
+
+This repository includes `.autorc` to bootstrap PR-label-based changelog generation with
+`intuit/auto`.
+
+- `.autorc` is the source of truth for label-to-semver/changelog mapping when using `auto`.
+- The `other` label is a maintained fallback for uncategorized PRs and maps to patch releases.
+- This bootstrap does not replace existing `git-cliff` automation in
+  `.github/workflows/changelog.yml` or `.github/workflows/release.yml` yet.
+
+Run the following commands when validating or generating changelog updates with `auto`:
+
+```bash
+# One-time label sync/update in GitHub
+GH_TOKEN=... auto create-labels
+
+# Preview changelog changes without writing or committing
+GH_TOKEN=... auto changelog --dry-run --from <last-tag> --to HEAD
+
+# Write CHANGELOG.md updates without auto-committing
+GH_TOKEN=... auto changelog --no-git-commit --from <last-tag> --to HEAD
+```
+
 ### Release Checklist
 
 1. Update version in `pyproject.toml`
