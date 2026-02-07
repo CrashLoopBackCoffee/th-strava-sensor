@@ -121,6 +121,16 @@ This ordering enables Strava→Garmin→File delegation chain.
 - Python version: 3.13+
 - Type hints required for all public APIs
 - Use Pydantic v2 for data validation
+- Python import guidelines:
+  - Prefer fully qualified external imports (e.g., `import datetime` instead of
+    `from datetime import datetime`).
+  - Abbreviate common modules on import:
+    - `import typing as t`
+    - `import pulumi as p`
+    - `import pulumi_aws as aws`
+    - `import pulumi_kubernetes as k8s`
+    - `import collections.abc as c`
+  - Do not use `from __future__ import annotations`.
 
 ### Error Handling
 - Use typed exceptions from `fitfile.py`: `NotAFitFileError`, `CorruptedFitFileError`, `InvalidActivityFileError`
