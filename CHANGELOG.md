@@ -1,3 +1,15 @@
+# v2.0.1 (Sat Feb 07 2026)
+
+#### 🐛 Bug Fixes
+
+- fix(ci): support auto changelog headers in release notes extraction [#104](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/104) ([@tobiashenkel](https://github.com/tobiashenkel))
+
+#### Authors: 1
+
+- Tobias Henkel ([@tobiashenkel](https://github.com/tobiashenkel))
+
+---
+
 # v2.0.0 (Sat Feb 07 2026)
 
 #### 🚨 Breaking Changes
