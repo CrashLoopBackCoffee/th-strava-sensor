@@ -127,6 +127,15 @@ The listener will:
 3. When an activity is created, fetch the activity via Strava + downstream source (e.g., Garmin), parse devices and publish to MQTT (if configured)
 4. Deregister the subscription on shutdown
 
+While the listener is running, a NiceGUI status overview is available at:
+
+```bash
+http://localhost:8000/status
+```
+
+The status page shows webhook subscription state, MQTT connectivity, and the latest activity
+processing details.
+
 ## How It Works
 
 The tool uses a modular architecture with pluggable sources:
