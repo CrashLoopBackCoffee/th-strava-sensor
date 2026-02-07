@@ -239,14 +239,14 @@ wheels = [
 
 [[package]]
 name = "garminconnect"
-version = "0.2.28"
+version = "0.2.38"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "garth" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/06/1f/d5aee4c4ff0dac960938f912f5c422c818bf55402b9b12264f2de8c5948d/garminconnect-0.2.28.tar.gz", hash = "sha256:51852b8035dad8ef76c906e7bf4c64a8dc7530c745e5fa3bf0c1e85e67313bb8", size = 148205, upload-time = "2025-06-09T17:39:55.422Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/04/b5/c2d3c7fb53c98f74ef208b44b686e48f01cb6434d091f66593e29fd4d2ed/garminconnect-0.2.38.tar.gz", hash = "sha256:53f0d73e821dfa9e93731a6a1c81c34e689ce157c2751edd22dd462d4e4f9e04", size = 37502, upload-time = "2026-01-04T12:08:57.563Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/f8/8e21a6d1e4e51ae6aae1ef0a65e0ae1ed6bfa114331ae1196376d37f6506/garminconnect-0.2.28-py3-none-any.whl", hash = "sha256:c3206f1c5d256b36d0498788b96275f344312968b5c415d48b6b7c7b7f68a5cd", size = 84413, upload-time = "2025-06-09T17:39:47.637Z" },
+    { url = "https://files.pythonhosted.org/packages/91/dc/9e0b1eee113fedfefd6577de45205e33505fcdc1520d4d28ee4c339e9862/garminconnect-0.2.38-py3-none-any.whl", hash = "sha256:801f64834d8d2ff41f10679e4111fc157312550980b0e29b0c2f263fd628a604", size = 32733, upload-time = "2026-01-04T12:08:55.45Z" },
 ]
 
 [[package]]
@@ -709,7 +709,7 @@ requires-dist = [
     { name = "daiquiri", specifier = ">=3.3.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "garmin-fit-sdk", specifier = ">=21.171.0" },
-    { name = "garminconnect", specifier = "==0.2.28" },
+    { name = "garminconnect", specifier = "==0.2.38" },
     { name = "httpx", specifier = ">=0.27.2" },
     { name = "paho-mqtt", specifier = ">=2.1.0" },
     { name = "pydantic", specifier = ">=2.11.4" },
