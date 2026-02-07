@@ -1,3 +1,37 @@
+# v2.2.0 (Sat Feb 07 2026)
+
+### Release Notes
+
+#### Improve web ui ([#123](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/123))
+
+* **New Features**
+  * Status page now displays environment configuration details for Strava and MQTT integration
+  * Added webhook error time tracking for improved diagnostics
+  * Expanded MQTT publish information with device and success status details
+  * Enhanced last activity information with granular timestamps
+
+* **Improvements**
+  * Redesigned status page with responsive grid layout and improved card organization
+  * Enhanced visual styling with better typography and spacing
+
+<!-- end of auto-generated comment: release notes by coderabbit.ai -->
+
+---
+
+#### ✨ Enhancements
+
+- Remember all sensors in local state [#127](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/127) ([@tobiashenkel](https://github.com/tobiashenkel))
+- Improve UI [#126](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/126) ([@tobiashenkel](https://github.com/tobiashenkel))
+- Align webhook server logging format (reuse existing logging config) [#125](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/125) ([@tobiashenkel](https://github.com/tobiashenkel))
+- Fix deprecation warning [#124](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/124) ([@tobiashenkel](https://github.com/tobiashenkel))
+- Improve web ui [#123](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/123) ([@tobiashenkel](https://github.com/tobiashenkel))
+
+#### Authors: 1
+
+- Tobias Henkel ([@tobiashenkel](https://github.com/tobiashenkel))
+
+---
+
 # v2.1.1 (Sat Feb 07 2026)
 
 #### 🐛 Bug Fixes
