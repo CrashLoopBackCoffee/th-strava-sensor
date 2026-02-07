@@ -53,6 +53,18 @@ class MockHttpClient:
         return self.delete_response
 
 
+class FakeDeviceStatus:
+    def __init__(self, serial_number: str, battery_level: int = 50, publish_result: bool = True):
+        self.serial_number = serial_number
+        self.battery_level = battery_level
+        self._publish_result = publish_result
+        self.publish_calls = 0
+
+    def publish_on_mqtt(self, _mqtt_client) -> bool:
+        self.publish_calls += 1
+        return self._publish_result
+
+
 @pytest.fixture
 def webhook_client():
     return TestClient(webhook_server.app)
@@ -295,3 +307,84 @@ async def test_register_webhook_invalid_delay_defaults_to_zero(monkeypatch):
     await webhook_server._register_webhook()
     assert ensure_called
     assert not sleep_called
+
+
+@pytest.mark.asyncio
+async def test_process_activity_persists_last_activity_metadata(monkeypatch):
+    devices = [FakeDeviceStatus('1234')]
+    save_calls = []
+
+    class FakeStravaSource:
+        def read_activity(self, _uri: str) -> bytes:
+            return b'fit-bytes'
+
+    class FakeFitFile:
+        def __init__(self, _fit_bytes: bytes):
+            pass
+
+        def get_devices_status(self):
+            return devices
+
+    class FakeStore:
+        def save(self, activity_id, saved_devices):
+            save_calls.append((activity_id, saved_devices))
+
+    monkeypatch.setattr(webhook_server, 'StravaSource', FakeStravaSource)
+    monkeypatch.setattr(webhook_server, 'initialize_sources', lambda: [FakeStravaSource()])
+    monkeypatch.setattr(webhook_server, 'FitFile', FakeFitFile)
+    monkeypatch.setattr(webhook_server, '_last_activity_store', FakeStore())
+    monkeypatch.setattr(webhook_server._state, 'mqtt_client', None)
+
+    await webhook_server._process_activity_async(42)
+
+    assert save_calls == [(42, devices)]
+
+
+@pytest.mark.asyncio
+async def test_reconnect_mqtt_republishes_persisted_metadata(monkeypatch):
+    monkeypatch.setenv('MQTT_BROKER_URL', 'mqtt://broker:1883')
+    monkeypatch.setenv('MQTT_USERNAME', 'user')
+    monkeypatch.setenv('MQTT_PASSWORD', 'pass')
+
+    device = FakeDeviceStatus('1234')
+    saved_records = []
+
+    class FakeMetadata:
+        activity_id = 99
+        devices = [device]
+
+    class FakeStore:
+        def load(self):
+            return FakeMetadata()
+
+    class FakeMQTTClient:
+        def __init__(self, on_connect_callback=None):
+            self._on_connect_callback = on_connect_callback
+            self._connected = False
+
+        def connect(self, _broker_url: str, _username: str, _password: str):
+            self._connected = True
+            if self._on_connect_callback:
+                self._on_connect_callback(self)
+
+        def disconnect(self):
+            self._connected = False
+
+        @property
+        def connected(self):
+            return self._connected
+
+    monkeypatch.setattr(webhook_server, 'MQTTClient', FakeMQTTClient)
+    monkeypatch.setattr(webhook_server, '_last_activity_store', FakeStore())
+    monkeypatch.setattr(
+        webhook_server.runtime_state,
+        'record_mqtt_publish',
+        lambda serial, success: saved_records.append((serial, success)),
+    )
+    monkeypatch.setattr(webhook_server._state, 'mqtt_client', None)
+
+    result = await webhook_server._reconnect_mqtt_client()
+
+    assert result == {'ok': True, 'connected': True, 'message': 'MQTT client connected'}
+    assert device.publish_calls == 1
+    assert saved_records == [('1234', True)]
