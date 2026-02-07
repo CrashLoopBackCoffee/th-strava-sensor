@@ -9,6 +9,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  # renovate: datasource=github-releases depName=astral-sh/uv
+  UV_VERSION: 0.8.11
 
 jobs:
   docker-build:
@@ -50,4 +52,4 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            UV_VERSION=0.8.11
+            UV_VERSION=${{ env.UV_VERSION }}
