@@ -11,11 +11,10 @@ from strava_sensor.fitfile.fitfile import (
 )
 
 
-def test__fitfile__parse(fixture_dir):
-    fitfile = FitFile.from_file(fixture_dir / 'test-1.fit')
-    assert fitfile.messages
-    assert fitfile.activity_id == 3415897090
-    assert fitfile.start_time == datetime.datetime(
+def test__fitfile__parse(fitfile_fixture):
+    assert fitfile_fixture.messages
+    assert fitfile_fixture.activity_id == 3415897090
+    assert fitfile_fixture.start_time == datetime.datetime(
         2025, 4, 30, 14, 46, 57, tzinfo=datetime.timezone.utc
     )
 
@@ -33,9 +32,8 @@ def test__fitfile__parse_corrupted(fixture_dir):
         FitFile(content)
 
 
-def test__fitfile__parse_corrupted_invalid_activity_file(fixture_dir):
-    content = bytearray((fixture_dir / 'test-1.fit').read_bytes())
-    fitfile = FitFile(content)
+def test__fitfile__parse_corrupted_invalid_activity_file(fitfile_fixture):
+    fitfile = fitfile_fixture
 
     # Check required messages
     required_messages = [
@@ -67,10 +65,8 @@ def test__fitfile__parse_corrupted_invalid_activity_file(fixture_dir):
         corrupted_fitfile.validate_activity_messages()
 
 
-def test__fitfile__devices_status(fixture_dir):
-    fitfile = FitFile.from_file(fixture_dir / 'test-1.fit')
-
-    device_statuses = fitfile.get_devices_status()
+def test__fitfile__devices_status(fitfile_fixture):
+    device_statuses = fitfile_fixture.get_devices_status()
     assert len(device_statuses) == 3
 
     bike_radar = device_statuses[0]

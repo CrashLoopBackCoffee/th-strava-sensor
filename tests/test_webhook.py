@@ -167,6 +167,7 @@ def test_healthz_endpoint(webhook_client):
 @pytest.mark.asyncio
 async def test_retry_list_then_success(strava_webhook_env, monkeypatch):
     monkeypatch.setenv('STRAVA_SUBSCRIPTION_RETRIES', '3')
+    monkeypatch.setenv('STRAVA_SUBSCRIPTION_RETRY_DELAY', '0')
     mgr = StravaWebhookManager()
 
     get_response_func, get_call_counter = create_failing_then_success_get_response(fail_count=1)
@@ -188,6 +189,7 @@ async def test_retry_list_then_success(strava_webhook_env, monkeypatch):
 @pytest.mark.asyncio
 async def test_retry_create_fail(strava_webhook_env, monkeypatch):
     monkeypatch.setenv('STRAVA_SUBSCRIPTION_RETRIES', '2')
+    monkeypatch.setenv('STRAVA_SUBSCRIPTION_RETRY_DELAY', '0')
     mgr = StravaWebhookManager()
 
     mock_client = MockHttpClient(
