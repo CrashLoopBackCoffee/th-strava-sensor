@@ -26,18 +26,18 @@ _logger = logging.getLogger(__name__)
 
 async def _register_webhook():
     """Register the Strava webhook subscription on startup."""
-
-    _logger.info('Wait to register Strava webhook subscription')
-    # Wait for 2 seconds to give the server time to start
-    await asyncio.sleep(2)
-
-    # Ensure subscription AFTER server is listening to avoid Strava verification race.
-    _logger.info('Registering Strava webhook subscription')
-    # Call async variant directly (avoid sync wrapper which uses asyncio.run())
-    sub_id = await manager_singleton.ensure_subscription()
-    if manager_singleton.verify_token and not os.environ.get('STRAVA_VERIFY_TOKEN'):
-        _logger.info('Using generated STRAVA_VERIFY_TOKEN=%s', manager_singleton.verify_token)
-    _logger.info('Active Strava subscription id=%s', sub_id)
+    try:
+        _logger.info('Registering Strava webhook subscription')
+        # Call async variant directly (avoid sync wrapper which uses asyncio.run())
+        sub_id = await manager_singleton.ensure_subscription()
+        if manager_singleton.verify_token and not os.environ.get('STRAVA_VERIFY_TOKEN'):
+            _logger.info('Using generated STRAVA_VERIFY_TOKEN=%s', manager_singleton.verify_token)
+        _logger.info('Active Strava subscription id=%s', sub_id)
+    except asyncio.CancelledError:
+        _logger.info('Webhook registration task cancelled')
+        raise
+    except Exception:
+        _logger.exception('Failed to register Strava webhook subscription')
 
 
 async def _delete_webhook():
@@ -47,6 +47,7 @@ async def _delete_webhook():
 
 class _State:
     mqtt_client: MQTTClient | None = None
+    webhook_registration_task: asyncio.Task[None] | None = None
 
 
 _state = _State()
@@ -63,9 +64,6 @@ async def lifespan(app: fastapi.FastAPI):
         error_msg = f'Missing required environment variables: {", ".join(missing_vars)}'
         _logger.error(error_msg)
         raise RuntimeError(error_msg)
-
-    # Register webhook and wait for completion to handle errors properly
-    await _register_webhook()
 
     # Initialize persistent MQTT client if env vars provided
     # persistent MQTT client lives on _state
@@ -92,8 +90,22 @@ async def lifespan(app: fastapi.FastAPI):
         except Exception:  # don't fail whole app; log
             _logger.exception('Failed to start persistent MQTT client')
             _state.mqtt_client = None
+
+    # Register webhook in background so startup can complete and Strava can verify callback URL.
+    _state.webhook_registration_task = asyncio.create_task(
+        _register_webhook(),
+        name='strava-webhook-registration',
+    )
     yield
+
     # Shutdown sequence
+    if _state.webhook_registration_task:
+        if not _state.webhook_registration_task.done():
+            _state.webhook_registration_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await _state.webhook_registration_task
+        _state.webhook_registration_task = None
+
     if _state.mqtt_client:
         try:
             _state.mqtt_client.disconnect()

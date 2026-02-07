@@ -1,3 +1,5 @@
+import asyncio
+
 from unittest import mock
 
 import pytest
@@ -5,8 +7,8 @@ import requests
 
 from fastapi.testclient import TestClient
 
+from strava_sensor import webhook_server
 from strava_sensor.strava.webhook import StravaWebhookManager
-from strava_sensor.webhook_server import app
 
 
 class MockResponse:
@@ -53,7 +55,7 @@ class MockHttpClient:
 
 @pytest.fixture
 def webhook_client():
-    return TestClient(app)
+    return TestClient(webhook_server.app)
 
 
 @pytest.fixture
@@ -200,3 +202,30 @@ async def test_retry_create_fail(strava_webhook_env, monkeypatch):
     with mock.patch('httpx.AsyncClient', lambda *_args, **_kwargs: mock_client):
         with pytest.raises(RuntimeError):
             await mgr.ensure_subscription()
+
+
+@pytest.mark.asyncio
+async def test_lifespan_does_not_block_on_webhook_registration(strava_webhook_env, monkeypatch):
+    started = asyncio.Event()
+    cancelled = asyncio.Event()
+
+    async def fake_register_webhook():
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+
+    async def fake_delete_webhook():
+        return None
+
+    monkeypatch.setattr(webhook_server, '_register_webhook', fake_register_webhook)
+    monkeypatch.setattr(webhook_server, '_delete_webhook', fake_delete_webhook)
+
+    async def _run_lifespan_once():
+        async with webhook_server.lifespan(webhook_server.app):
+            await asyncio.wait_for(started.wait(), timeout=0.2)
+
+    await asyncio.wait_for(_run_lifespan_once(), timeout=0.5)
+    assert cancelled.is_set()
