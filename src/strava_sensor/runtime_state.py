@@ -10,6 +10,8 @@ class RuntimeState:
         self._last_activity_time: datetime.datetime | None = None
         self._last_fit_error: str | None = None
         self._last_fit_error_time: datetime.datetime | None = None
+        self._last_webhook_error: str | None = None
+        self._last_webhook_error_time: datetime.datetime | None = None
         self._last_mqtt_publish_success: bool | None = None
         self._last_mqtt_publish_time: datetime.datetime | None = None
         self._last_mqtt_publish_device: str | None = None
@@ -29,6 +31,12 @@ class RuntimeState:
         with self._lock:
             self._last_fit_error = message
             self._last_fit_error_time = now
+
+    def record_webhook_error(self, message: str) -> None:
+        now = datetime.datetime.now(datetime.UTC)
+        with self._lock:
+            self._last_webhook_error = message
+            self._last_webhook_error_time = now
 
     def record_mqtt_publish(self, device_serial: str, success: bool) -> None:
         now = datetime.datetime.now(datetime.UTC)
@@ -50,6 +58,8 @@ class RuntimeState:
                 'last_activity_time': self._last_activity_time,
                 'last_fit_error': self._last_fit_error,
                 'last_fit_error_time': self._last_fit_error_time,
+                'last_webhook_error': self._last_webhook_error,
+                'last_webhook_error_time': self._last_webhook_error_time,
                 'last_mqtt_publish_device': self._last_mqtt_publish_device,
                 'last_mqtt_publish_success': self._last_mqtt_publish_success,
                 'last_mqtt_publish_time': self._last_mqtt_publish_time,

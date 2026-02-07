@@ -23,6 +23,7 @@ class StatusViewModel:
     def __init__(self) -> None:
         self.subscription_id = '—'
         self.webhook_url = '—'
+        self.webhook_error = '—'
         self.mqtt_status = 'unknown'
         self.mqtt_last_publish = '—'
         self.last_activity = '—'
@@ -43,6 +44,10 @@ class StatusViewModel:
 
         self.subscription_id = f'Subscription id: {subscription_id or "—"}'
         self.webhook_url = f'Webhook URL: {os.environ.get("STRAVA_WEBHOOK_URL", "—")}'
+        self.webhook_error = (
+            f'Webhook error: {snapshot["last_webhook_error"] or "—"} '
+            f'at {_format_time(snapshot["last_webhook_error_time"])}'
+        )
         self.mqtt_status = f'MQTT status: {mqtt_status}'
         self.mqtt_last_publish = (
             'Last publish: '
@@ -88,6 +93,7 @@ def register_status_page(app: fastapi.FastAPI) -> None:
                     ui.label('Webhook').classes('text-lg font-semibold')
                     ui.label().bind_text_from(model, 'subscription_id')
                     ui.label().bind_text_from(model, 'webhook_url')
+                    ui.label().bind_text_from(model, 'webhook_error')
 
                 with ui.card().classes('flex-1'):
                     ui.label('MQTT').classes('text-lg font-semibold')
