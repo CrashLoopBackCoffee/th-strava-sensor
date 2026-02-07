@@ -120,6 +120,10 @@ async def lifespan(app: fastapi.FastAPI):
             _logger.exception('Failed to start persistent MQTT client')
             _state.mqtt_client = None
             runtime_state.set_mqtt_connected(None)
+    else:
+        _logger.warning(
+            'MQTT environment variables not fully set; skipping MQTT client initialization'
+        )
 
     if not missing_vars:
         # Register webhook in background so startup can complete and Strava can verify callback URL.
