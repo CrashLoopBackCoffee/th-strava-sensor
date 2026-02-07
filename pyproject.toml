@@ -1,6 +1,6 @@
 [project]
 name = "strava-sensor"
-version = "2.0.2"
+version = "2.0.3"
 description = "Strava Battery Sensor for Home Assistant"
 readme = "README.md"
 requires-python = ">=3.13"
