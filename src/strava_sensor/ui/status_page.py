@@ -1,5 +1,6 @@
 import datetime
 import os
+import typing as t
 
 import fastapi
 
@@ -25,6 +26,8 @@ class StatusViewModel:
         self.webhook_url = '—'
         self.webhook_error = '—'
         self.mqtt_status = 'unknown'
+        self.mqtt_connected: bool | None = None
+        self.mqtt_action_label = 'Reconnect MQTT'
         self.mqtt_last_publish = '—'
         self.last_activity = '—'
         self.last_activity_time = '—'
@@ -47,6 +50,7 @@ class StatusViewModel:
             os.environ.get(name) for name in ('MQTT_BROKER_URL', 'MQTT_USERNAME', 'MQTT_PASSWORD')
         )
         mqtt_connected = snapshot['mqtt_connected']
+        self.mqtt_connected = mqtt_connected
         mqtt_status = 'unknown'
         if mqtt_connected is True:
             mqtt_status = 'connected'
@@ -84,6 +88,7 @@ class StatusViewModel:
             f'at {_format_time(snapshot["last_webhook_error_time"])}'
         )
         self.mqtt_status = f'MQTT status: {mqtt_status}'
+        self.mqtt_action_label = 'Disconnect MQTT' if mqtt_connected is True else 'Reconnect MQTT'
         self.mqtt_last_publish = (
             'Last publish: '
             f'{snapshot["last_mqtt_publish_device"] or "—"} '
@@ -112,7 +117,11 @@ class StatusViewModel:
         )
 
 
-def register_status_page(app: fastapi.FastAPI) -> None:
+def register_status_page(
+    app: fastapi.FastAPI,
+    mqtt_disconnect_action: t.Callable[[], t.Awaitable[dict[str, t.Any]]] | None = None,
+    mqtt_reconnect_action: t.Callable[[], t.Awaitable[dict[str, t.Any]]] | None = None,
+) -> None:
     @app.get('/status')
     def status_redirect() -> fastapi.responses.RedirectResponse:
         return fastapi.responses.RedirectResponse(url='/', status_code=307)
@@ -120,6 +129,31 @@ def register_status_page(app: fastapi.FastAPI) -> None:
     @ui.page('/')
     def status_page() -> None:
         model = StatusViewModel()
+
+        async def _run_mqtt_action(
+            action: t.Callable[[], t.Awaitable[dict[str, t.Any]]] | None,
+            unavailable_message: str,
+        ) -> None:
+            if action is None:
+                ui.notify(unavailable_message, color='warning')
+                return
+
+            result = await action()
+            model.update()
+            ui.notify(result['message'], color='positive' if result['ok'] else 'negative')
+
+        async def _toggle_mqtt() -> None:
+            model.update()
+            if model.mqtt_connected is True:
+                await _run_mqtt_action(
+                    mqtt_disconnect_action,
+                    unavailable_message='MQTT disconnect action is unavailable',
+                )
+                return
+            await _run_mqtt_action(
+                mqtt_reconnect_action,
+                unavailable_message='MQTT reconnect action is unavailable',
+            )
 
         def _render_health_badge(prefix: str, status_field: str) -> None:
             ui.badge(f'{prefix}: OK').props('color=positive').bind_visibility_from(
@@ -164,6 +198,10 @@ def register_status_page(app: fastapi.FastAPI) -> None:
                     ui.label().bind_text_from(model, 'mqtt_last_publish').classes(
                         'text-base text-slate-800'
                     )
+                    with ui.row().classes('gap-2 pt-2'):
+                        ui.button(on_click=_toggle_mqtt).bind_text_from(
+                            model, 'mqtt_action_label'
+                        ).props('color=primary')
 
             with ui.card().classes('w-full border border-slate-200 shadow-sm'):
                 ui.label('Last Activity').classes('text-lg font-semibold text-slate-900')
