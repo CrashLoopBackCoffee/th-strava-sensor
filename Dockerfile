@@ -7,7 +7,7 @@ ARG UV_VERSION=0.10.0
 FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv
 
 # Build dependencies and install packages
-FROM python:3.13-slim AS builder
+FROM python:3.14-slim AS builder
 
 COPY --from=uv /uv /uvx /bin/
 WORKDIR /app
@@ -20,7 +20,7 @@ COPY src/ ./src/
 RUN uv sync --frozen --no-dev
 
 # Final runtime image
-FROM python:3.13-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 WORKDIR /app
