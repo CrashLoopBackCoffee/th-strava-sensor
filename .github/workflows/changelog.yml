@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       force_regenerate:
-        description: 'Force regenerate changelog'
+        description: "Force regenerate changelog"
         required: false
         default: true
         type: boolean
@@ -44,105 +44,42 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '24'
-
-      - name: Determine next release version with auto
-        id: version
-        run: |
-          LATEST_TAG=$(git tag --list 'v*' --sort=-version:refname | head -n1)
-          if [ -z "$LATEST_TAG" ]; then
-            echo 'No version tags found (expected tags like v1.2.3)'
-            exit 1
-          fi
-
-          BUMP_TYPE=$(
-            npx -y \
-              --package=auto@${{ env.AUTO_VERSION }} \
-              --package=@auto-it/git-tag@${{ env.AUTO_VERSION }} \
-              auto version --from "$LATEST_TAG" --quiet \
-              | grep -Eo 'major|minor|patch' \
-              | tail -n1
-          )
-
-          if [ -z "$BUMP_TYPE" ]; then
-            echo 'Failed to determine bump type via auto version'
-            exit 1
-          fi
-
-          VERSION_NO_PREFIX="${LATEST_TAG#v}"
-          if ! [[ "$VERSION_NO_PREFIX" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Unsupported tag format: $LATEST_TAG"
-            exit 1
-          fi
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_NO_PREFIX"
-
-          case "$BUMP_TYPE" in
-            major)
-              MAJOR=$((MAJOR + 1))
-              MINOR=0
-              PATCH=0
-              ;;
-            minor)
-              MINOR=$((MINOR + 1))
-              PATCH=0
-              ;;
-            patch)
-              PATCH=$((PATCH + 1))
-              ;;
-            *)
-              echo "Unsupported bump type: $BUMP_TYPE"
-              exit 1
-              ;;
-          esac
-
-          NEXT_VERSION="${MAJOR}.${MINOR}.${PATCH}"
-
-          {
-            echo "latest_tag=$LATEST_TAG"
-            echo "bump_type=$BUMP_TYPE"
-            echo "version=$NEXT_VERSION"
-            echo "version_tag=v$NEXT_VERSION"
-          } >> "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ env.GH_TOKEN }}
+          node-version: "24"
 
       - name: Generate changelog with auto
-        run: >
-          npx -y
-          --package=auto@${{ env.AUTO_VERSION }}
-          --package=@auto-it/git-tag@${{ env.AUTO_VERSION }}
-          auto changelog
-          --from "${{ steps.version.outputs.latest_tag }}"
-          --to HEAD
-          --no-git-commit
-          --title "${{ steps.version.outputs.version }}"
+        run: npx -y auto@${{ env.AUTO_VERSION }} changelog --no-git-commit
         env:
           GH_TOKEN: ${{ env.GH_TOKEN }}
 
-      - name: Detect changelog changes
-        id: changelog_changes
+      - name: Extract version from changelog
+        id: version
         run: |
-          if git diff --quiet -- CHANGELOG.md; then
-            echo "has_changelog_changes=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_changelog_changes=true" >> "$GITHUB_OUTPUT"
+          HEADER=$(
+            grep -m1 -E '^## (\[v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?\]|v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?)' CHANGELOG.md \
+            || true
+          )
+          VERSION=$(echo "$HEADER" | sed -E 's/^## \[?v?([0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?)\]?.*/\1/')
+          if [ -z "$VERSION" ]; then
+            echo "Failed to extract version from CHANGELOG.md"
+            exit 1
           fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "version_tag=v$VERSION" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ env.GH_TOKEN }}
 
       - name: Setup project
-        if: steps.changelog_changes.outputs.has_changelog_changes == 'true'
         uses: ./.github/actions/setup-project
         with:
           python-version: "3.13"
 
       - name: Update pyproject.toml version
-        if: steps.changelog_changes.outputs.has_changelog_changes == 'true'
         run: |
           NEW_VERSION="${{ steps.version.outputs.version }}"
           sed -i "s/^version = .*/version = \"$NEW_VERSION\"/" pyproject.toml
           echo "Updated version to $NEW_VERSION"
 
       - name: Update uv.lock with new version
-        if: steps.changelog_changes.outputs.has_changelog_changes == 'true'
         run: |
           # Sync lock file to update project version
           uv sync
@@ -151,7 +88,7 @@ jobs:
       - name: Check for changes
         id: changes
         run: |
-          if git diff --quiet; then
+          if git diff --quiet && git diff --cached --quiet; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
             echo "has_changes=true" >> $GITHUB_OUTPUT
@@ -179,10 +116,14 @@ jobs:
 
           # Add and commit changes
           git add .
-          git commit -m "chore: prepare release ${{ steps.version.outputs.version_tag }}
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: prepare release ${{ steps.version.outputs.version_tag }}
 
-          - Update CHANGELOG.md with latest changes
-          - Bump version to ${{ steps.version.outputs.version_tag }}"
+            - Update CHANGELOG.md with latest changes
+            - Bump version to ${{ steps.version.outputs.version_tag }}"
+          else
+            echo "No staged changes to commit; using existing commits on branch"
+          fi
 
           # Push branch (force-with-lease is safe for both new and existing)
           git push origin "$BRANCH_NAME" --force-with-lease
