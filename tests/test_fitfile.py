@@ -125,3 +125,26 @@ def test__fitfile__devices_status_ignores_invalid_device_info_message(fitfile_fi
     assert len(device_statuses) == 3
     bike_power = [device for device in device_statuses if device.device_type == 'bike_power'][0]
     assert bike_power.serial_number == '7891445'
+
+
+def test__fitfile__devices_status_reuses_serial_number_from_same_device_index(fitfile_fixture):
+    fitfile = copy.deepcopy(fitfile_fixture)
+    fitfile.messages['device_info_mesgs'].append(  # type: ignore[arg-type]
+        {
+            'timestamp': datetime.datetime.now(datetime.UTC),
+            'device_index': 2,
+            'device_type': 'bike_power',
+            'product': 22,
+            'battery_status': 'new',
+            'battery_voltage': 4.0,
+            'manufacturer': 'favero_electronics',
+            'source_type': 'antplus',
+            # serial_number intentionally missing from latest battery sample
+        }
+    )
+
+    device_statuses = fitfile.get_devices_status()
+    bike_power = [device for device in device_statuses if device.device_type == 'bike_power'][0]
+    assert bike_power.serial_number == '7891445'
+    assert bike_power.battery_status == 'new'
+    assert bike_power.battery_voltage == 4.0
