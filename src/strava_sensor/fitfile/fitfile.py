@@ -12,6 +12,7 @@ from strava_sensor.fitfile.model import DeviceStatus
 
 type FitMessageList = c.Sequence[c.Mapping[str | int, t.Any]]
 type FitMessages = c.MutableMapping[str, FitMessageList]
+type DeviceKey = tuple[str, int | None]  # (device_index, battery_identifier)
 
 _logger = logging.getLogger(__name__)
 
@@ -104,15 +105,81 @@ class FitFile:
                 continue
             serial_number_by_device_index[str(message.get('device_index', ''))] = str(serial_number)
 
-        device_status_by_index: dict[str, DeviceStatus] = {}
-
+        # Build a lookup for device metadata by device_index
+        # Merge all device_info messages to collect complete metadata
+        device_metadata_by_index: dict[str, dict] = {}
         for message in device_info:
+            device_index = str(message.get('device_index', ''))
+            if device_index not in device_metadata_by_index:
+                device_metadata_by_index[device_index] = {}
+            # Merge fields from this message (later messages override earlier ones)
+            for k, v in message.items():
+                if isinstance(k, str) and v is not None:
+                    device_metadata_by_index[device_index][k] = v
+
+        # Track device status by (device_index, battery_identifier) tuple
+        # For devices without aux battery info, battery_identifier is None
+        device_status_by_key: dict[DeviceKey, DeviceStatus] = {}
+
+        # Process device_aux_battery_info messages (multiple batteries per device)
+        device_aux_battery_info = self.messages.get(MessageType.DEVICE_AUX_BATTERY_INFO.value, [])
+
+        # Track which devices have aux battery info
+        devices_with_aux_battery: set[str] = set()
+
+        for message in device_aux_battery_info:
             if not message.get('battery_status'):
                 continue
 
             # Strip message of int keys which break pydantic validation
             message_stripped = {k: v for k, v in message.items() if isinstance(k, str)}
-            message_stripped['device_index'] = str(message_stripped.get('device_index', ''))
+            device_index = str(message_stripped.get('device_index', ''))
+            message_stripped['device_index'] = device_index
+
+            # Track that this device has aux battery info
+            devices_with_aux_battery.add(device_index)
+
+            # Merge with device metadata
+            if device_index in device_metadata_by_index:
+                metadata = device_metadata_by_index[device_index].copy()
+                # Update with aux battery info (override battery-specific fields)
+                metadata.update(message_stripped)
+                message_stripped = metadata
+
+            # Ensure serial_number is set
+            if not message_stripped.get('serial_number'):
+                message_stripped['serial_number'] = serial_number_by_device_index.get(device_index)
+
+            try:
+                device_status = DeviceStatus.model_validate(message_stripped)
+            except pydantic.ValidationError as exc:
+                _logger.warning(
+                    'Skipping invalid device_aux_battery_info message: %s (message=%s)',
+                    exc,
+                    message_stripped,
+                )
+                continue
+
+            # Use battery_identifier as part of the key
+            battery_id = device_status.battery_identifier
+            key = (device_status.device_index, battery_id)
+            device_status_by_key[key] = device_status
+
+        # Process device_info messages (single battery per device)
+        # Only include devices that don't have aux battery info
+        for message in device_info:
+            if not message.get('battery_status'):
+                continue
+
+            device_index = str(message.get('device_index', ''))
+
+            # Skip if this device has aux battery info
+            if device_index in devices_with_aux_battery:
+                continue
+
+            # Strip message of int keys which break pydantic validation
+            message_stripped = {k: v for k, v in message.items() if isinstance(k, str)}
+            message_stripped['device_index'] = device_index
 
             if not message_stripped.get('serial_number'):
                 message_stripped['serial_number'] = serial_number_by_device_index.get(
@@ -128,6 +195,9 @@ class FitFile:
                     message_stripped,
                 )
                 continue
-            device_status_by_index[device_status.device_index] = device_status
 
-        return list(device_status_by_index.values())
+            # Use None for battery_identifier to represent single-battery devices
+            key = (device_status.device_index, None)
+            device_status_by_key[key] = device_status
+
+        return list(device_status_by_key.values())

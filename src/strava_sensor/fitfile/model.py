@@ -45,6 +45,7 @@ class DeviceStatus(pydantic.BaseModel):
     battery_voltage: float | None = None
     battery_status: BatteryStatus
     battery_level: int | None = None
+    battery_identifier: int | None = None
     manufacturer: str
     source_type: str
     software_version: str | None = None
@@ -80,12 +81,23 @@ class DeviceStatus(pydantic.BaseModel):
         Returns:
             True if both publishes succeeded, False otherwise
         """
-        # Publish device status
-        mqtt_path = f'strava/{self.serial_number}/status'
+        # For multi-battery devices, use suffix in state topic and component IDs
+        # but keep device ID the same so batteries appear under one device
+        suffix = f'_{self.battery_identifier}' if self.battery_identifier is not None else ''
+
+        # Publish device status to battery-specific topic
+        mqtt_path = f'strava/{self.serial_number}{suffix}/status'
         status_success = mqtt_client.publish(mqtt_path, self.model_dump_json())
 
-        # Publish home assistant discovery information
+        # Device ID is the same for all batteries of the same physical device
         device_id = f'strava-{self.serial_number}'
+
+        # Component IDs include battery identifier to make them unique
+        component_suffix = suffix if suffix else ''
+        battery_label = (
+            f' Battery {self.battery_identifier}' if self.battery_identifier is not None else ''
+        )
+
         payload: dict[str, t.Any] = {
             'dev': {
                 'ids': device_id,
@@ -100,39 +112,42 @@ class DeviceStatus(pydantic.BaseModel):
                 'sw': STRAVA_TOOL_VERSION,
             },
             'cmps': {
-                f'{device_id}_voltage': {
+                f'{device_id}{component_suffix}_voltage': {
                     'p': 'sensor',
                     'device_class': 'voltage',
                     'unit_of_measurement': 'V',
                     'value_template': '{{ value_json.battery_voltage }}',
-                    'unique_id': f'{device_id}_voltage',
+                    'unique_id': f'{device_id}{component_suffix}_voltage',
+                    'name': f'Battery Voltage{battery_label}',
                 },
-                f'{device_id}_battery_status': {
+                f'{device_id}{component_suffix}_battery_status': {
                     'p': 'sensor',
                     'device_class': 'enum',
                     'value_template': '{{ value_json.battery_status }}',
-                    'unique_id': f'{device_id}_battery_status',
+                    'unique_id': f'{device_id}{component_suffix}_battery_status',
                     'icon': 'mdi:battery',
-                    'name': 'Battery Status',
+                    'name': f'Battery Status{battery_label}',
                 },
             },
             'state_topic': mqtt_path,
         }
 
         if self.battery_level:
-            payload['cmps'][f'{device_id}_battery_level'] = {
+            payload['cmps'][f'{device_id}{component_suffix}_battery_level'] = {
                 'p': 'sensor',
                 'device_class': 'battery',
                 'unit_of_measurement': '%',
                 'value_template': '{{ value_json.battery_level }}',
-                'unique_id': f'{device_id}_battery_level',
+                'unique_id': f'{device_id}{component_suffix}_battery_level',
+                'name': f'Battery Level{battery_label}',
             }
 
         # Add hardware version if available
         if self.hardware_version:
             payload['dev']['hw'] = self.hardware_version
 
-        discovery_topic = f'homeassistant/device/strava-{self.serial_number}/config'
+        # Discovery topic includes battery identifier to allow separate discovery per battery
+        discovery_topic = f'homeassistant/device/{device_id}{component_suffix}/config'
         _logger.debug('Publishing discovery topic: %s', discovery_topic)
         discovery_success = mqtt_client.publish(discovery_topic, json.dumps(payload))
 
