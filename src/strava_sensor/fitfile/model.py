@@ -45,6 +45,7 @@ class DeviceStatus(pydantic.BaseModel):
     battery_voltage: float | None = None
     battery_status: BatteryStatus
     battery_level: int | None = None
+    battery_identifier: int | None = None
     manufacturer: str
     source_type: str
     software_version: str | None = None
@@ -80,16 +81,19 @@ class DeviceStatus(pydantic.BaseModel):
         Returns:
             True if both publishes succeeded, False otherwise
         """
+        # Create unique identifier based on battery_identifier if present
+        suffix = f'_{self.battery_identifier}' if self.battery_identifier is not None else ''
+        
         # Publish device status
-        mqtt_path = f'strava/{self.serial_number}/status'
+        mqtt_path = f'strava/{self.serial_number}{suffix}/status'
         status_success = mqtt_client.publish(mqtt_path, self.model_dump_json())
 
         # Publish home assistant discovery information
-        device_id = f'strava-{self.serial_number}'
+        device_id = f'strava-{self.serial_number}{suffix}'
         payload: dict[str, t.Any] = {
             'dev': {
                 'ids': device_id,
-                'name': f'Strava {self.device_type} {self.serial_number}',
+                'name': f'Strava {self.device_type} {self.serial_number}{suffix}',
                 'mf': self.manufacturer,
                 'mdl': f'{self.product}',
                 'sn': self.serial_number,
@@ -132,7 +136,7 @@ class DeviceStatus(pydantic.BaseModel):
         if self.hardware_version:
             payload['dev']['hw'] = self.hardware_version
 
-        discovery_topic = f'homeassistant/device/strava-{self.serial_number}/config'
+        discovery_topic = f'homeassistant/device/{device_id}/config'
         _logger.debug('Publishing discovery topic: %s', discovery_topic)
         discovery_success = mqtt_client.publish(discovery_topic, json.dumps(payload))
 
