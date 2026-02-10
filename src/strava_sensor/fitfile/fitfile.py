@@ -109,7 +109,9 @@ class FitFile:
         for message in device_info:
             device_index = str(message.get('device_index', ''))
             if device_index not in device_metadata_by_index:
-                device_metadata_by_index[device_index] = {k: v for k, v in message.items() if isinstance(k, str)}
+                device_metadata_by_index[device_index] = {
+                    k: v for k, v in message.items() if isinstance(k, str)
+                }
 
         # Track device status by (device_index, battery_identifier) tuple
         # For devices without aux battery info, battery_identifier is None
@@ -117,10 +119,10 @@ class FitFile:
 
         # Process device_aux_battery_info messages (multiple batteries per device)
         device_aux_battery_info = self.messages.get(MessageType.DEVICE_AUX_BATTERY_INFO.value, [])
-        
+
         # Track which devices have aux battery info
         devices_with_aux_battery: set[str] = set()
-        
+
         for message in device_aux_battery_info:
             if not message.get('battery_status'):
                 continue
@@ -129,7 +131,7 @@ class FitFile:
             message_stripped = {k: v for k, v in message.items() if isinstance(k, str)}
             device_index = str(message_stripped.get('device_index', ''))
             message_stripped['device_index'] = device_index
-            
+
             # Track that this device has aux battery info
             devices_with_aux_battery.add(device_index)
 
@@ -153,7 +155,7 @@ class FitFile:
                     message_stripped,
                 )
                 continue
-            
+
             # Use battery_identifier as part of the key
             battery_id = device_status.battery_identifier
             key = (device_status.device_index, battery_id)
@@ -166,7 +168,7 @@ class FitFile:
                 continue
 
             device_index = str(message.get('device_index', ''))
-            
+
             # Skip if this device has aux battery info
             if device_index in devices_with_aux_battery:
                 continue
@@ -189,7 +191,7 @@ class FitFile:
                     message_stripped,
                 )
                 continue
-            
+
             # Use None for battery_identifier to represent single-battery devices
             key = (device_status.device_index, None)
             device_status_by_key[key] = device_status

@@ -161,7 +161,7 @@ def test__fitfile__devices_status_reuses_serial_number_from_same_device_index(fi
     # Get the latest timestamp from existing messages and add 1 hour
     latest_timestamp = max(msg['timestamp'] for msg in fitfile.messages['device_info_mesgs'])
     new_timestamp = latest_timestamp + datetime.timedelta(hours=1)
-    
+
     fitfile.messages['device_info_mesgs'].append(  # type: ignore[arg-type]
         {
             'timestamp': new_timestamp,

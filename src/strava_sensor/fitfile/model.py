@@ -83,7 +83,7 @@ class DeviceStatus(pydantic.BaseModel):
         """
         # Create unique identifier based on battery_identifier if present
         suffix = f'_{self.battery_identifier}' if self.battery_identifier is not None else ''
-        
+
         # Publish device status
         mqtt_path = f'strava/{self.serial_number}{suffix}/status'
         status_success = mqtt_client.publish(mqtt_path, self.model_dump_json())
