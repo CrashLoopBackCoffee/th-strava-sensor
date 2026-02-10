@@ -102,7 +102,7 @@ class FitFile:
             serial_number = message.get('serial_number')
             if not serial_number:
                 continue
-            serial_number_by_device_index[str(message.get('device_index'))] = str(serial_number)
+            serial_number_by_device_index[str(message.get('device_index', ''))] = str(serial_number)
 
         device_status_by_index: dict[str, DeviceStatus] = {}
 
@@ -112,7 +112,7 @@ class FitFile:
 
             # Strip message of int keys which break pydantic validation
             message_stripped = {k: v for k, v in message.items() if isinstance(k, str)}
-            message_stripped['device_index'] = str(message_stripped.get('device_index'))
+            message_stripped['device_index'] = str(message_stripped.get('device_index', ''))
 
             if not message_stripped.get('serial_number'):
                 message_stripped['serial_number'] = serial_number_by_device_index.get(
