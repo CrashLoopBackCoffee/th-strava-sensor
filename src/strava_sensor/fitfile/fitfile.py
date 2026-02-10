@@ -97,15 +97,20 @@ class FitFile:
     def get_devices_status(self) -> list[DeviceStatus]:
         device_info = self.messages.get(MessageType.DEVICE_INFO.value, [])
 
+        # Step 1: Build serial number and device info lookup by device_index
         serial_number_by_device_index: dict[str, str] = {}
+        device_info_by_index: dict[str, c.Mapping[str | int, t.Any]] = {}
         for message in device_info:
+            device_index = str(message.get('device_index', ''))
             serial_number = message.get('serial_number')
-            if not serial_number:
-                continue
-            serial_number_by_device_index[str(message.get('device_index', ''))] = str(serial_number)
+            if serial_number:
+                serial_number_by_device_index[device_index] = str(serial_number)
+            # Keep the latest device_info message for each device_index
+            device_info_by_index[device_index] = message
 
         device_status_by_index: dict[str, DeviceStatus] = {}
 
+        # Step 2: Process device_info messages with battery_status
         for message in device_info:
             if not message.get('battery_status'):
                 continue
@@ -130,4 +135,98 @@ class FitFile:
                 continue
             device_status_by_index[device_status.device_index] = device_status
 
-        return list(device_status_by_index.values())
+        # Step 3: Process device_aux_battery_info messages to add battery data for devices
+        # that don't have battery_status in device_info (e.g., creator/main device)
+        device_aux_battery_info = self.messages.get(MessageType.DEVICE_AUX_BATTERY_INFO.value, [])
+        _logger.debug(
+            'Processing %d device_aux_battery_info messages', len(device_aux_battery_info)
+        )
+        for aux_message in device_aux_battery_info:
+            device_index = str(aux_message.get('device_index', ''))
+            # Skip if aux message has no useful battery data
+            has_battery_data = (
+                aux_message.get('battery_status')
+                or aux_message.get('battery_voltage') is not None
+                or aux_message.get('battery_level') is not None
+            )
+            if not has_battery_data:
+                _logger.debug('Skipping aux message for device %s: no battery data', device_index)
+                continue
+
+            # Only process aux battery info for devices not already in device_status_by_index
+            # (i.e., devices that didn't have battery_status in device_info)
+            if device_index not in device_status_by_index and device_index in device_info_by_index:
+                _logger.debug('Adding device %s from aux_battery_info', device_index)
+                # Create new device entry by merging device_info with aux battery info
+                base_info = device_info_by_index[device_index]
+                # Strip message of int keys which break pydantic validation
+                merged_message = {k: v for k, v in base_info.items() if isinstance(k, str)}
+                merged_message['device_index'] = device_index
+
+                # Add battery info from aux message
+                if aux_message.get('battery_voltage') is not None:
+                    merged_message['battery_voltage'] = aux_message['battery_voltage']
+                if aux_message.get('battery_status'):
+                    merged_message['battery_status'] = aux_message['battery_status']
+                if aux_message.get('battery_level') is not None:
+                    merged_message['battery_level'] = aux_message['battery_level']
+
+                # Ensure battery_status is present (required by DeviceStatus)
+                # Derive from battery_level if not present
+                if not merged_message.get('battery_status'):
+                    battery_level = merged_message.get('battery_level')
+                    if battery_level is not None:
+                        # Derive battery_status from battery_level percentage
+                        if battery_level > 75:
+                            merged_message['battery_status'] = 'good'
+                        elif battery_level > 50:
+                            merged_message['battery_status'] = 'ok'
+                        elif battery_level > 25:
+                            merged_message['battery_status'] = 'low'
+                        else:
+                            merged_message['battery_status'] = 'critical'
+                    else:
+                        # Default to 'unknown' if we can't determine status
+                        merged_message['battery_status'] = 'unknown'
+
+                # Ensure serial number is present
+                if not merged_message.get('serial_number'):
+                    merged_message['serial_number'] = serial_number_by_device_index.get(
+                        device_index
+                    )
+
+                # Ensure device_type is present (required by DeviceStatus)
+                # For creator/main device, default to 'creator' if not present
+                if not merged_message.get('device_type'):
+                    merged_message['device_type'] = device_index
+
+                try:
+                    device_status = DeviceStatus.model_validate(merged_message)
+                    device_status_by_index[device_index] = device_status
+                except pydantic.ValidationError as exc:
+                    _logger.warning(
+                        'Skipping invalid device from aux_battery_info: %s (message=%s)',
+                        exc,
+                        merged_message,
+                    )
+                    continue
+            elif device_index in device_status_by_index:
+                _logger.debug(
+                    'Skipping aux_battery_info for device %s: already has battery_status',
+                    device_index,
+                )
+            elif device_index not in device_info_by_index:
+                _logger.debug(
+                    'Skipping aux_battery_info for device %s: no device_info found', device_index
+                )
+
+        devices = list(device_status_by_index.values())
+        _logger.info('Found %d devices with battery status', len(devices))
+        for device in devices:
+            _logger.debug(
+                'Device %s: %s (serial %s)',
+                device.device_index,
+                device.device_type,
+                device.serial_number,
+            )
+        return devices
