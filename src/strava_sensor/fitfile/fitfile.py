@@ -12,6 +12,7 @@ from strava_sensor.fitfile.model import DeviceStatus
 
 type FitMessageList = c.Sequence[c.Mapping[str | int, t.Any]]
 type FitMessages = c.MutableMapping[str, FitMessageList]
+type DeviceKey = tuple[str, int | None]  # (device_index, battery_identifier)
 
 _logger = logging.getLogger(__name__)
 
@@ -115,7 +116,7 @@ class FitFile:
 
         # Track device status by (device_index, battery_identifier) tuple
         # For devices without aux battery info, battery_identifier is None
-        device_status_by_key: dict[tuple[str, int | None], DeviceStatus] = {}
+        device_status_by_key: dict[DeviceKey, DeviceStatus] = {}
 
         # Process device_aux_battery_info messages (multiple batteries per device)
         device_aux_battery_info = self.messages.get(MessageType.DEVICE_AUX_BATTERY_INFO.value, [])
