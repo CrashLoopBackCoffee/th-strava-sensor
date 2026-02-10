@@ -148,3 +148,40 @@ def test__fitfile__devices_status_reuses_serial_number_from_same_device_index(fi
     assert bike_power.serial_number == '7891445'
     assert bike_power.battery_status == 'new'
     assert bike_power.battery_voltage == 4.0
+
+
+def test__fitfile__devices_status_includes_creator_with_aux_battery_info(fitfile_fixture):
+    """Test that creator device with battery info in device_aux_battery_info is exported."""
+    fitfile = copy.deepcopy(fitfile_fixture)
+
+    # Add battery info for creator device in device_aux_battery_info_mesgs
+    if 'device_aux_battery_info_mesgs' not in fitfile.messages:
+        fitfile.messages['device_aux_battery_info_mesgs'] = []
+
+    fitfile.messages['device_aux_battery_info_mesgs'].append(  # type: ignore[arg-type]
+        {
+            'timestamp': datetime.datetime.now(datetime.UTC),
+            'device_index': 'creator',
+            'battery_voltage': 4.05,
+            'battery_status': 'good',
+            'battery_level': 85,
+            'battery_identifier': 0,
+        }
+    )
+
+    device_statuses = fitfile.get_devices_status()
+
+    # Should now have 4 devices: 3 original + creator
+    assert len(device_statuses) == 4
+
+    # Find creator device
+    creator = [device for device in device_statuses if device.device_index == 'creator'][0]
+    assert creator.serial_number == '3415897090'
+    assert creator.manufacturer == 'garmin'
+    assert creator.product == 'epix_gen2'  # product overridden by garmin_product
+    assert creator.battery_voltage == 4.05
+    assert creator.battery_status == 'good'
+    assert creator.battery_level == 85
+    assert creator.source_type == 'local'
+    assert creator.software_version == '20.22'
+    assert creator.device_type == 'creator'

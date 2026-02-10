@@ -97,15 +97,20 @@ class FitFile:
     def get_devices_status(self) -> list[DeviceStatus]:
         device_info = self.messages.get(MessageType.DEVICE_INFO.value, [])
 
+        # Step 1: Build serial number and device info lookup by device_index
         serial_number_by_device_index: dict[str, str] = {}
+        device_info_by_index: dict[str, c.Mapping[str | int, t.Any]] = {}
         for message in device_info:
+            device_index = str(message.get('device_index', ''))
             serial_number = message.get('serial_number')
-            if not serial_number:
-                continue
-            serial_number_by_device_index[str(message.get('device_index', ''))] = str(serial_number)
+            if serial_number:
+                serial_number_by_device_index[device_index] = str(serial_number)
+            # Keep the latest device_info message for each device_index
+            device_info_by_index[device_index] = message
 
         device_status_by_index: dict[str, DeviceStatus] = {}
 
+        # Step 2: Process device_info messages with battery_status
         for message in device_info:
             if not message.get('battery_status'):
                 continue
@@ -129,5 +134,51 @@ class FitFile:
                 )
                 continue
             device_status_by_index[device_status.device_index] = device_status
+
+        # Step 3: Process device_aux_battery_info messages to add battery data for devices
+        # that don't have battery_status in device_info (e.g., creator/main device)
+        device_aux_battery_info = self.messages.get(MessageType.DEVICE_AUX_BATTERY_INFO.value, [])
+        for aux_message in device_aux_battery_info:
+            device_index = str(aux_message.get('device_index', ''))
+            if not aux_message.get('battery_status'):
+                continue
+
+            # Only process aux battery info for devices not already in device_status_by_index
+            # (i.e., devices that didn't have battery_status in device_info)
+            if device_index not in device_status_by_index and device_index in device_info_by_index:
+                # Create new device entry by merging device_info with aux battery info
+                base_info = device_info_by_index[device_index]
+                merged_message = {k: v for k, v in base_info.items() if isinstance(k, str)}
+                merged_message['device_index'] = device_index
+
+                # Add battery info from aux message
+                if aux_message.get('battery_voltage') is not None:
+                    merged_message['battery_voltage'] = aux_message['battery_voltage']
+                if aux_message.get('battery_status'):
+                    merged_message['battery_status'] = aux_message['battery_status']
+                if aux_message.get('battery_level') is not None:
+                    merged_message['battery_level'] = aux_message['battery_level']
+
+                # Ensure serial number is present
+                if not merged_message.get('serial_number'):
+                    merged_message['serial_number'] = serial_number_by_device_index.get(
+                        device_index
+                    )
+
+                # Ensure device_type is present (required by DeviceStatus)
+                # For creator/main device, default to 'creator' if not present
+                if not merged_message.get('device_type'):
+                    merged_message['device_type'] = device_index
+
+                try:
+                    device_status = DeviceStatus.model_validate(merged_message)
+                    device_status_by_index[device_index] = device_status
+                except pydantic.ValidationError as exc:
+                    _logger.warning(
+                        'Skipping invalid device from aux_battery_info: %s (message=%s)',
+                        exc,
+                        merged_message,
+                    )
+                    continue
 
         return list(device_status_by_index.values())
