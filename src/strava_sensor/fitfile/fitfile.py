@@ -148,6 +148,7 @@ class FitFile:
             if device_index not in device_status_by_index and device_index in device_info_by_index:
                 # Create new device entry by merging device_info with aux battery info
                 base_info = device_info_by_index[device_index]
+                # Strip message of int keys which break pydantic validation
                 merged_message = {k: v for k, v in base_info.items() if isinstance(k, str)}
                 merged_message['device_index'] = device_index
 
