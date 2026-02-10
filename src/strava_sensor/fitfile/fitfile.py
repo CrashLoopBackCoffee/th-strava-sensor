@@ -140,7 +140,13 @@ class FitFile:
         device_aux_battery_info = self.messages.get(MessageType.DEVICE_AUX_BATTERY_INFO.value, [])
         for aux_message in device_aux_battery_info:
             device_index = str(aux_message.get('device_index', ''))
-            if not aux_message.get('battery_status'):
+            # Skip if aux message has no useful battery data
+            has_battery_data = (
+                aux_message.get('battery_status')
+                or aux_message.get('battery_voltage') is not None
+                or aux_message.get('battery_level') is not None
+            )
+            if not has_battery_data:
                 continue
 
             # Only process aux battery info for devices not already in device_status_by_index
@@ -159,6 +165,24 @@ class FitFile:
                     merged_message['battery_status'] = aux_message['battery_status']
                 if aux_message.get('battery_level') is not None:
                     merged_message['battery_level'] = aux_message['battery_level']
+
+                # Ensure battery_status is present (required by DeviceStatus)
+                # Derive from battery_level if not present
+                if not merged_message.get('battery_status'):
+                    battery_level = merged_message.get('battery_level')
+                    if battery_level is not None:
+                        # Derive battery_status from battery_level percentage
+                        if battery_level > 75:
+                            merged_message['battery_status'] = 'good'
+                        elif battery_level > 50:
+                            merged_message['battery_status'] = 'ok'
+                        elif battery_level > 25:
+                            merged_message['battery_status'] = 'low'
+                        else:
+                            merged_message['battery_status'] = 'critical'
+                    else:
+                        # Default to 'unknown' if we can't determine status
+                        merged_message['battery_status'] = 'unknown'
 
                 # Ensure serial number is present
                 if not merged_message.get('serial_number'):

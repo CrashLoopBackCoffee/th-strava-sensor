@@ -185,3 +185,30 @@ def test__fitfile__devices_status_includes_creator_with_aux_battery_info(fitfile
     assert creator.source_type == 'local'
     assert creator.software_version == '20.22'
     assert creator.device_type == 'creator'
+
+
+def test__fitfile__devices_status_derives_battery_status_from_level(fitfile_fixture):
+    """Test that battery_status is derived from battery_level when not present."""
+    fitfile = copy.deepcopy(fitfile_fixture)
+
+    # Add battery info for creator with only battery_level (no battery_status)
+    if 'device_aux_battery_info_mesgs' not in fitfile.messages:
+        fitfile.messages['device_aux_battery_info_mesgs'] = []
+
+    fitfile.messages['device_aux_battery_info_mesgs'].append(  # type: ignore[arg-type]
+        {
+            'timestamp': datetime.datetime.now(datetime.UTC),
+            'device_index': 'creator',
+            'battery_voltage': 4.324,
+            'battery_level': 93,
+            # Intentionally omit battery_status to test derivation
+        }
+    )
+
+    device_statuses = fitfile.get_devices_status()
+    assert len(device_statuses) == 4
+
+    creator = [device for device in device_statuses if device.device_index == 'creator'][0]
+    assert creator.battery_voltage == 4.324
+    assert creator.battery_level == 93
+    assert creator.battery_status == 'good'  # Derived from level > 75
