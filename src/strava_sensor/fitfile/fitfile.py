@@ -96,15 +96,54 @@ class FitFile:
 
     def get_devices_status(self) -> list[DeviceStatus]:
         device_info = self.messages.get(MessageType.DEVICE_INFO.value, [])
+        aux_battery_info = self.messages.get(MessageType.DEVICE_AUX_BATTERY_INFO.value, [])
 
-        device_status_by_index: dict[int, DeviceStatus] = {}
+        serial_number_by_device_index: dict[str, str] = {}
+        for message in device_info:
+            serial_number = message.get('serial_number')
+            if not serial_number:
+                continue
+            serial_number_by_device_index[str(message.get('device_index', ''))] = str(serial_number)
+
+        latest_device_metadata_by_index: dict[
+            str, tuple[datetime.datetime | None, dict[str, t.Any]]
+        ] = {}
+        device_status_by_index: dict[str, DeviceStatus] = {}
+        aux_status_by_key: dict[tuple[str, int], tuple[datetime.datetime | None, DeviceStatus]] = {}
 
         for message in device_info:
-            if not message.get('battery_status'):
-                continue
-
             # Strip message of int keys which break pydantic validation
             message_stripped = {k: v for k, v in message.items() if isinstance(k, str)}
+            device_index_raw = message_stripped.get('device_index')
+            if device_index_raw is None:
+                continue
+
+            device_index = str(device_index_raw)
+            message_stripped['device_index'] = device_index
+
+            if not message_stripped.get('serial_number'):
+                message_stripped['serial_number'] = serial_number_by_device_index.get(device_index)
+
+            required_metadata_fields = ('serial_number', 'product', 'manufacturer', 'source_type')
+            has_required_metadata = all(
+                field in message_stripped and message_stripped[field] is not None
+                for field in required_metadata_fields
+            )
+            if has_required_metadata:
+                timestamp = message_stripped.get('timestamp')
+                if not isinstance(timestamp, datetime.datetime):
+                    timestamp = None
+
+                previous_entry = latest_device_metadata_by_index.get(device_index)
+                if (
+                    previous_entry is None
+                    or previous_entry[0] is None
+                    or (timestamp is not None and previous_entry[0] <= timestamp)
+                ):
+                    latest_device_metadata_by_index[device_index] = (timestamp, message_stripped)
+
+            if not message.get('battery_status'):
+                continue
 
             try:
                 device_status = DeviceStatus.model_validate(message_stripped)
@@ -117,4 +156,62 @@ class FitFile:
                 continue
             device_status_by_index[device_status.device_index] = device_status
 
-        return list(device_status_by_index.values())
+        for message in aux_battery_info:
+            battery_identifier = message.get('battery_identifier')
+            if not isinstance(battery_identifier, int):
+                continue
+
+            device_index_raw = message.get('device_index')
+            if device_index_raw is None:
+                continue
+            device_index = str(device_index_raw)
+
+            metadata_entry = latest_device_metadata_by_index.get(device_index)
+            if metadata_entry is None:
+                _logger.warning(
+                    'Skipping aux battery message because no matching device metadata was found: %s',
+                    message,
+                )
+                continue
+            _, base_message = metadata_entry
+
+            message_stripped = {
+                k: v for k, v in message.items() if isinstance(k, str) and k != 'timestamp'
+            }
+            message_stripped['device_index'] = device_index
+            merged_message = {
+                **base_message,
+                **message_stripped,
+            }
+
+            try:
+                device_status = DeviceStatus.model_validate(merged_message)
+            except pydantic.ValidationError as exc:
+                _logger.warning(
+                    'Skipping invalid device_aux_battery_info message: %s (message=%s)',
+                    exc,
+                    merged_message,
+                )
+                continue
+
+            timestamp = message.get('timestamp')
+            if not isinstance(timestamp, datetime.datetime):
+                timestamp = None
+
+            key = (device_index, battery_identifier)
+            previous_status = aux_status_by_key.get(key)
+            if (
+                previous_status is None
+                or previous_status[0] is None
+                or (timestamp is not None and previous_status[0] <= timestamp)
+            ):
+                aux_status_by_key[key] = (timestamp, device_status)
+
+        for device_index, device_status in device_status_by_index.items():
+            aux_battery_exists = any(
+                aux_device_index == device_index for aux_device_index, _ in aux_status_by_key
+            )
+            if not aux_battery_exists:
+                aux_status_by_key[(device_index, 0)] = (None, device_status)
+
+        return [status for _, status in aux_status_by_key.values()]

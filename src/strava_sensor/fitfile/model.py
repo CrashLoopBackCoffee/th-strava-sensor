@@ -38,13 +38,14 @@ class DeviceStatus(pydantic.BaseModel):
         'coerce_numbers_to_str': True,
     }
 
-    device_index: int
+    device_index: str
     device_type: str
     serial_number: str
     product: str
     battery_voltage: float | None = None
     battery_status: BatteryStatus
     battery_level: int | None = None
+    battery_identifier: int | None = None
     manufacturer: str
     source_type: str
     software_version: str | None = None
@@ -81,18 +82,26 @@ class DeviceStatus(pydantic.BaseModel):
             True if both publishes succeeded, False otherwise
         """
         # Publish device status
-        mqtt_path = f'strava/{self.serial_number}/status'
+        device_serial = self.serial_number
+        if self.battery_identifier is not None:
+            device_serial = f'{device_serial}_{self.battery_identifier}'
+
+        mqtt_path = f'strava/{device_serial}/status'
         status_success = mqtt_client.publish(mqtt_path, self.model_dump_json())
 
         # Publish home assistant discovery information
-        device_id = f'strava-{self.serial_number}'
+        device_id = f'strava-{device_serial}'
+        device_name = f'Strava {self.device_type} {self.serial_number}'
+        if self.battery_identifier is not None:
+            device_name = f'{device_name} (battery {self.battery_identifier})'
+
         payload: dict[str, t.Any] = {
             'dev': {
                 'ids': device_id,
-                'name': f'Strava {self.device_type} {self.serial_number}',
+                'name': device_name,
                 'mf': self.manufacturer,
                 'mdl': f'{self.product}',
-                'sn': self.serial_number,
+                'sn': device_serial,
                 'sw': self.software_version,
             },
             'o': {
@@ -132,7 +141,7 @@ class DeviceStatus(pydantic.BaseModel):
         if self.hardware_version:
             payload['dev']['hw'] = self.hardware_version
 
-        discovery_topic = f'homeassistant/device/strava-{self.serial_number}/config'
+        discovery_topic = f'homeassistant/device/{device_id}/config'
         _logger.debug('Publishing discovery topic: %s', discovery_topic)
         discovery_success = mqtt_client.publish(discovery_topic, json.dumps(payload))
 
