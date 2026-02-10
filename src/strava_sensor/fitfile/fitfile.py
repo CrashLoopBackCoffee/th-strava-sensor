@@ -97,6 +97,13 @@ class FitFile:
     def get_devices_status(self) -> list[DeviceStatus]:
         device_info = self.messages.get(MessageType.DEVICE_INFO.value, [])
 
+        serial_number_by_device_index: dict[t.Any, str] = {}
+        for message in device_info:
+            serial_number = message.get('serial_number')
+            if not serial_number:
+                continue
+            serial_number_by_device_index[message.get('device_index')] = str(serial_number)
+
         device_status_by_index: dict[int, DeviceStatus] = {}
 
         for message in device_info:
@@ -105,6 +112,11 @@ class FitFile:
 
             # Strip message of int keys which break pydantic validation
             message_stripped = {k: v for k, v in message.items() if isinstance(k, str)}
+
+            if not message_stripped.get('serial_number'):
+                message_stripped['serial_number'] = serial_number_by_device_index.get(
+                    message_stripped.get('device_index')
+                )
 
             try:
                 device_status = DeviceStatus.model_validate(message_stripped)
