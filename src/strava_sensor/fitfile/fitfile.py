@@ -106,13 +106,16 @@ class FitFile:
             serial_number_by_device_index[str(message.get('device_index', ''))] = str(serial_number)
 
         # Build a lookup for device metadata by device_index
+        # Merge all device_info messages to collect complete metadata
         device_metadata_by_index: dict[str, dict] = {}
         for message in device_info:
             device_index = str(message.get('device_index', ''))
             if device_index not in device_metadata_by_index:
-                device_metadata_by_index[device_index] = {
-                    k: v for k, v in message.items() if isinstance(k, str)
-                }
+                device_metadata_by_index[device_index] = {}
+            # Merge fields from this message (later messages override earlier ones)
+            for k, v in message.items():
+                if isinstance(k, str) and v is not None:
+                    device_metadata_by_index[device_index][k] = v
 
         # Track device status by (device_index, battery_identifier) tuple
         # For devices without aux battery info, battery_identifier is None
