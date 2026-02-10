@@ -138,6 +138,9 @@ class FitFile:
         # Step 3: Process device_aux_battery_info messages to add battery data for devices
         # that don't have battery_status in device_info (e.g., creator/main device)
         device_aux_battery_info = self.messages.get(MessageType.DEVICE_AUX_BATTERY_INFO.value, [])
+        _logger.debug(
+            'Processing %d device_aux_battery_info messages', len(device_aux_battery_info)
+        )
         for aux_message in device_aux_battery_info:
             device_index = str(aux_message.get('device_index', ''))
             # Skip if aux message has no useful battery data
@@ -147,11 +150,13 @@ class FitFile:
                 or aux_message.get('battery_level') is not None
             )
             if not has_battery_data:
+                _logger.debug('Skipping aux message for device %s: no battery data', device_index)
                 continue
 
             # Only process aux battery info for devices not already in device_status_by_index
             # (i.e., devices that didn't have battery_status in device_info)
             if device_index not in device_status_by_index and device_index in device_info_by_index:
+                _logger.debug('Adding device %s from aux_battery_info', device_index)
                 # Create new device entry by merging device_info with aux battery info
                 base_info = device_info_by_index[device_index]
                 # Strip message of int keys which break pydantic validation
@@ -205,5 +210,23 @@ class FitFile:
                         merged_message,
                     )
                     continue
+            elif device_index in device_status_by_index:
+                _logger.debug(
+                    'Skipping aux_battery_info for device %s: already has battery_status',
+                    device_index,
+                )
+            elif device_index not in device_info_by_index:
+                _logger.debug(
+                    'Skipping aux_battery_info for device %s: no device_info found', device_index
+                )
 
-        return list(device_status_by_index.values())
+        devices = list(device_status_by_index.values())
+        _logger.info('Found %d devices with battery status', len(devices))
+        for device in devices:
+            _logger.debug(
+                'Device %s: %s (serial %s)',
+                device.device_index,
+                device.device_type,
+                device.serial_number,
+            )
+        return devices
