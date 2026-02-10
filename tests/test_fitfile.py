@@ -70,7 +70,7 @@ def test__fitfile__devices_status(fitfile_fixture):
     assert len(device_statuses) == 3
 
     bike_radar = device_statuses[0]
-    assert bike_radar.device_index == 5
+    assert bike_radar.device_index == '5'
     assert bike_radar.device_type == 'bike_radar'
     assert bike_radar.serial_number == '3359471441'
     assert bike_radar.product == 'varia rtl516'
@@ -83,7 +83,7 @@ def test__fitfile__devices_status(fitfile_fixture):
     assert bike_radar.hardware_version == '66'
 
     bike_power = device_statuses[1]
-    assert bike_power.device_index == 2
+    assert bike_power.device_index == '2'
     assert bike_power.device_type == 'bike_power'
     assert bike_power.serial_number == '7891445'
     assert bike_power.product == 'assioma pro mx-2 spd'
@@ -96,7 +96,7 @@ def test__fitfile__devices_status(fitfile_fixture):
     assert bike_power.hardware_version == '7'
 
     bike_speed = device_statuses[2]
-    assert bike_speed.device_index == 8
+    assert bike_speed.device_index == '8'
     assert bike_speed.device_type == 'bike_speed'
     assert bike_speed.serial_number == '11699632'
     assert bike_speed.product == 'bsm'

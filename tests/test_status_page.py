@@ -32,7 +32,7 @@ def test_status_view_model_shows_persisted_last_activity_metadata(monkeypatch):
         last_activity_device_serials=['1234'],
         devices=[
             DeviceStatus(
-                device_index=1,
+                device_index='1',
                 device_type='bike_light',
                 serial_number='1234',
                 product='rtl516',
@@ -47,7 +47,7 @@ def test_status_view_model_shows_persisted_last_activity_metadata(monkeypatch):
                 antplus_device_type='bike_light',
             ),
             DeviceStatus(
-                device_index=2,
+                device_index='2',
                 device_type='heart_rate',
                 serial_number='5678',
                 product='hrm-pro',

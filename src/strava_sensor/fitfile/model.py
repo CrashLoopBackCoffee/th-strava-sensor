@@ -38,7 +38,7 @@ class DeviceStatus(pydantic.BaseModel):
         'coerce_numbers_to_str': True,
     }
 
-    device_index: int
+    device_index: str
     device_type: str
     serial_number: str
     product: str

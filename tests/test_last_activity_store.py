@@ -7,7 +7,7 @@ from strava_sensor.last_activity_store import LastActivityMetadata, LastActivity
 
 def _build_device_status(serial_number: str) -> DeviceStatus:
     return DeviceStatus(
-        device_index=0,
+        device_index='0',
         device_type='radar',
         serial_number=serial_number,
         product='rtl516',
