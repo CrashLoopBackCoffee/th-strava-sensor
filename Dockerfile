@@ -2,7 +2,7 @@
 # Environment variables documented in README.md
 
 # renovate: datasource=github-releases packageName=astral-sh/uv
-ARG UV_VERSION=0.10.2
+ARG UV_VERSION=0.11.14
 
 FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv
 
