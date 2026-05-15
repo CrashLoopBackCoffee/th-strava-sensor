@@ -7,7 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "daiquiri>=3.3.0",
     "garmin-fit-sdk>=21.171.0",
-    "garminconnect==0.2.38",
+    "garminconnect==0.3.3",
     "httpx>=0.27.2",
     "paho-mqtt>=2.1.0",
     "opentelemetry-api>=1.38.0",
