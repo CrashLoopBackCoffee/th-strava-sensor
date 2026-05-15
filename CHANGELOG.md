@@ -1,3 +1,31 @@
+# v2.2.1 (Fri May 15 2026)
+
+#### 🔧 Other Changes
+
+- Lock file maintenance [#140](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/140) ([@renovate[bot]](https://github.com/renovate[bot]))
+- Update docker/login-action action to v4 [#143](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/143) ([@renovate[bot]](https://github.com/renovate[bot]))
+- Update docker/metadata-action action to v6 [#144](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/144) ([@renovate[bot]](https://github.com/renovate[bot]))
+- Update docker/build-push-action action to v7 [#145](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/145) ([@renovate[bot]](https://github.com/renovate[bot]))
+- Update dependency requests to v2.33.0 [SECURITY] [#147](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/147) ([@renovate[bot]](https://github.com/renovate[bot]))
+- Update softprops/action-gh-release action to v3 [#148](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/148) ([@renovate[bot]](https://github.com/renovate[bot]))
+- Update astral-sh/setup-uv action to v8 [#150](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/150) ([@renovate[bot]](https://github.com/renovate[bot]))
+- Update dependency pytest to v9.0.3 [SECURITY] [#149](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/149) ([@renovate[bot]](https://github.com/renovate[bot]))
+- Update ghcr.io/astral-sh/uv Docker tag to v0.11.14 [#141](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/141) ([@renovate[bot]](https://github.com/renovate[bot]))
+- Update dependency nicegui to v3.10.0 [SECURITY] [#142](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/142) ([@renovate[bot]](https://github.com/renovate[bot]))
+- chore(deps): lock file maintenance [#129](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/129) ([@renovate[bot]](https://github.com/renovate[bot]))
+- chore(deps): update ghcr.io/astral-sh/uv docker tag to v0.10.2 [#132](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/132) ([@renovate[bot]](https://github.com/renovate[bot]))
+- Default device index to empty string [#134](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/134) ([@tobiashenkel](https://github.com/tobiashenkel))
+- Treat FIT `device_index` as opaque string and simplify parsing [#133](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/133) ([@tobiashenkel](https://github.com/tobiashenkel))
+- Get serial number from different row if unset [#131](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/131) ([@tobiashenkel](https://github.com/tobiashenkel))
+- chore(deps): update ghcr.io/astral-sh/uv docker tag to v0.10.1 [#130](https://github.com/CrashLoopBackCoffee/th-strava-sensor/pull/130) ([@renovate[bot]](https://github.com/renovate[bot]))
+
+#### Authors: 2
+
+- [@renovate[bot]](https://github.com/renovate[bot])
+- Tobias Henkel ([@tobiashenkel](https://github.com/tobiashenkel))
+
+---
+
 # v2.2.0 (Sat Feb 07 2026)
 
 ### Release Notes
